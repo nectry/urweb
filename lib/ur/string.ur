@@ -111,3 +111,10 @@ fun trim s =
         else
             ""
     end
+
+fun parseHex (s : string) : int =
+  let fun byDigit x acc =
+        if x = length s then acc
+        else byDigit (x+1) (16 * acc + Char.toHex (sub s x))
+  in byDigit 0 0 end
+

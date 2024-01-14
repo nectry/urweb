@@ -76,6 +76,8 @@ val length = fn [a] =>
                     length' 0
                 end
 
+fun snoc [a] (lst : t a) (a : a) : t a = rev (a :: rev lst)
+
 fun foldlMapAbort [a] [b] [c] f =
     let
         fun foldlMapAbort' ls' acc ls =
@@ -99,7 +101,9 @@ val revAppend = fn [a] =>
                        ra
                    end
 
-fun append [a] (ls1 : t a) (ls2 : t a) = revAppend (rev ls1) ls2                
+fun append [a] (ls1 : t a) (ls2 : t a) = revAppend (rev ls1) ls2
+
+fun concat [a] (lst : t (t a)) : t a = foldl append [] lst
 
 fun mp [a] [b] f =
     let
@@ -539,11 +543,29 @@ fun assocAddSorted [a] [b] (_ : eq a) (_ : ord a) (x : a) (y : b) (ls : t (a * b
         aas ls []
     end
 
+(* Updates an element in the association list, potentially removing it altogether. *)
+fun assocUpdate [a] [b] (_ : eq a) (x : a) (f : b -> option b) : list (a * b) -> list (a * b) =
+    (* mapPartial (fn (a,b) => if x = a then Option.mp (fn b => (a,b)) (f b) else Some (a,b)) *)
+    (* The above one-liner fails with a "Substitution in constructor is blocked by a too-deep unification variable" that I don't know how to fix. *)
+    let
+        fun mp' acc ls =
+            case ls of
+                [] => rev acc
+              | (a,b) :: ls =>
+                mp' (if x = a then
+                    (case f b of
+                        None => acc
+                      | Some y => (a,y) :: acc)
+                    else (a,b) :: acc) ls
+    in
+        mp' []
+    end
+
 fun recToList [a ::: Type] [r ::: {Unit}] (fl : folder r)
   = @foldUR [a] [fn _ => list a] (fn [nm ::_] [rest ::_] [[nm] ~ rest] x xs =>
 				      x :: xs) [] fl
 
-fun take [a] (n : int) (xs : list a) : list a = 
+fun take [a] (n : int) (xs : list a) : list a =
     if n <= 0 then
         []
     else
@@ -561,8 +583,8 @@ fun drop [a] (n : int) (xs : list a) : list a =
 
 fun splitAt [a] (n : int) (xs : list a) : list a * list a =
     (take n xs, drop n xs)
-    
-fun span [a] (f : a -> bool) (ls : list a) : list a * list a  = 
+
+fun span [a] (f : a -> bool) (ls : list a) : list a * list a  =
     let
         fun span' ls acc =
             case ls of
@@ -571,16 +593,16 @@ fun span [a] (f : a -> bool) (ls : list a) : list a * list a  =
     in
         span' ls []
     end
-    
-fun groupBy [a] (f : a -> a -> bool) (ls : list a) : list (list a) = 
+
+fun groupBy [a] (f : a -> a -> bool) (ls : list a) : list (list a) =
     let
         fun groupBy' ls acc =
             case ls of
                 [] => rev ([] :: acc)
-              | x :: xs => 
+              | x :: xs =>
                 let
                     val (ys, zs) = span (f x) xs
-                in 
+                in
                     groupBy' zs ((x :: ys) :: acc)
                 end
     in
@@ -611,3 +633,8 @@ fun tabulateM [m] (_ : monad m) [a] (f : int -> m a) n =
     in
         tabulate' n []
     end
+
+fun intercalate (sep : string) (strs : list string) : string = case strs of
+    [] => ""
+  | fst :: rst => foldl (fn w s => s ^ sep ^ w) fst rst
+

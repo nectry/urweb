@@ -14,11 +14,15 @@ val foldr : a ::: Type -> b ::: Type -> (a -> b -> b) -> b -> t a -> b
 
 val length : a ::: Type -> t a -> int
 
+val snoc : a ::: Type -> t a -> a -> t a
+
 val rev : a ::: Type -> t a -> t a
 
 val revAppend : a ::: Type -> t a -> t a -> t a
 
 val append : a ::: Type -> t a -> t a -> t a
+
+val concat : a ::: Type -> t (t a) -> t a
 
 val mp : a ::: Type -> b ::: Type -> (a -> b) -> t a -> t b
 
@@ -41,7 +45,7 @@ val mapMi : m ::: (Type -> Type) -> monad m -> a ::: Type -> b ::: Type
             -> (int -> a -> m b) -> t a -> m (t b)
 
 val mapPartialM : m ::: (Type -> Type) -> monad m -> a ::: Type -> b ::: Type -> (a -> m (option b)) -> t a -> m (t b)
-                                                                        
+
 val mapXM : m ::: (Type -> Type) -> monad m -> a ::: Type -> ctx ::: {Unit}
             -> (a -> m (xml ctx [] [])) -> t a -> m (xml ctx [] [])
 
@@ -120,6 +124,12 @@ val assocAdd : a ::: Type -> b ::: Type -> eq a -> a -> b -> t (a * b) -> t (a *
 val assocAddSorted : a ::: Type -> b ::: Type -> eq a -> ord a -> a -> b -> t (a * b) -> t (a * b)
 (* Assume the list is already sorted in ascending order and maintain that ordering. *)
 
+val assocUpdate : a ::: Type -> b ::: Type -> eq a
+    -> a -> (b -> option b) -> t (a * b) -> t (a * b)
+(* Update an association in the association list.  The function given is called
+on the `b` value of the found association; if it returns `None`, then the
+association is removed, and if it's `Some x`, the value is updated to `x`. *)
+
 (** Converting records to lists *)
 
 val recToList : a ::: Type -> r ::: {Unit} -> folder r -> $(mapU a r) -> t a
@@ -134,3 +144,7 @@ val span : a ::: Type -> (a -> bool) -> t a -> t a * t a
 
 (** Group a list into maximal adjacent segments where all elements compare as equal, according to the provided predicate. *)
 val groupBy : a ::: Type -> (a -> a -> bool) -> t a -> t (t a)
+
+(** Puts a separator string between each element of the list of strings and then
+   concatenates everything together. *)
+val intercalate : string -> list string -> string
