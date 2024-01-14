@@ -35,3 +35,6 @@ val newlines : ctx ::: {Unit} -> [[Body] ~ ctx] => string -> xml ([Body] ++ ctx)
 val isPrefix : {Full : t, Prefix : t} -> bool
 
 val trim : t -> t
+
+(* The input string must be all hex characters.  The output is the number it represents in hex. *)
+val parseHex : string -> int
