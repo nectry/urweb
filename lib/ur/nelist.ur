@@ -10,10 +10,15 @@ fun fromList [a] (ls : list a) : t a =
     case ls of
         [] => error <xml>Nelist.fromList: input not empty</xml>
       | x :: ls' => {First = x, Rest = ls'}
-    
+
+fun fromListResult [a] (ls : list a) : result (t a) =
+    case ls of
+        [] => Failure <xml>Nelist.fromList: input not empty</xml>
+      | x :: ls' => Success {First = x, Rest = ls'}
+
 fun app [m] [a] (_ : monad m) (f : a -> m unit) (nel : t a) : m unit =
     f nel.First; List.app f nel.Rest
-    
+
 fun mp [a] [b] (f : a -> b) (nel : t a) : t b =
     {First = f nel.First, Rest = List.mp f nel.Rest}
 
@@ -63,13 +68,7 @@ fun sort [a] (f : a -> a -> bool) (nel : t a) : t a =
     fromList (List.sort f (toList nel))
 
 fun json_t [a] (_ : Json.json a) =
-    Json.mkJson {ToJson = fn x => Json.toJson (toList x),
-                 FromJson = fn s =>
-                               let
-                                   val (v, s') = Json.fromJson' s
-                               in
-                                   (fromList v, s')
-                               end}
+    Json.json_derived fromListResult toList
 
 fun search [a] [b] (f : a -> option b) (nel : t a) =
     case f nel.First of
