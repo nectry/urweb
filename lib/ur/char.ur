@@ -34,5 +34,5 @@ fun toHex ch =
     else if isXdigit ch then
         toInt ch - toInt (if isUpper ch then #"A" else #"a") + 10
     else
-        Basis.error <xml>Char.toHex: invalid</xml>
+        Basis.error <xml>Char.toHex: Invalid hexadecimal digit "{[ch]}"</xml>
 

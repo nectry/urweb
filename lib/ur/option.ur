@@ -64,3 +64,11 @@ fun mapM [m] (_ : monad m) [a] [b] (f : a -> m b) (x : t a) : m (t b) =
     case x of
         None => return None
       | Some y => z <- f y; return (Some z)
+
+fun unOption [a] [b] (none : b) (some : a -> b) (o : option a) : b =
+  case o of
+    None => none
+  | Some a => some a
+
+fun guard (b : bool) : option unit =
+  if b then Some () else None
