@@ -5,9 +5,10 @@ type t a = {
      Rest : list a
 }
 
-(* Converting to and from normal lists.  The former may raise an error. *)
+(* Converting to and from normal lists.  `fromList` may raise an error on empty input. *)
 val toList : a ::: Type -> t a -> list a
 val fromList : a ::: Type -> list a -> t a
+val fromListResult : a ::: Type -> list a -> result (t a)
 
 (* Causing a side effect for every element of a list *)
 val app : m ::: (Type -> Type) -> a ::: Type
