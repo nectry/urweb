@@ -21,6 +21,10 @@ end
 
 val not : bool -> bool
 
+(* Result type *)
+datatype result r = Success of r | Failure of xbody
+val result_monad : monad result
+
 (* Type-level identity function *)
 con ident = K ==> fn t :: K => t
 

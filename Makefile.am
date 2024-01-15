@@ -110,6 +110,7 @@ uninstall-local-main:
 		$(DESTDIR)$(INCLUDE)/config.h $(DESTDIR)$(INCLUDE)/queue.h $(DESTDIR)$(INCLUDE)/request.h $(DESTDIR)$(INCLUDE)/types.h		\
 		$(DESTDIR)$(INCLUDE)/urweb.h $(DESTDIR)$(INCLUDE)/types_cpp.h $(DESTDIR)$(INCLUDE)/urweb_cpp.h \
         $(DESTDIR)$(LIB_UR)/nelist.ur $(DESTDIR)$(LIB_UR)/nelist.urs \
+        $(DESTDIR)$(LIB_UR)/result.ur $(DESTDIR)$(LIB_UR)/result.urs
 
 uninstall-local: uninstall-local-main uninstall-emacs
 
