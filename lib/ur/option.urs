@@ -16,3 +16,10 @@ val get : a ::: Type -> a -> option a -> a
 val unsafeGet : a ::: Type -> option a -> a
 
 val mapM : m ::: (Type -> Type) -> monad m -> a ::: Type -> b ::: Type -> (a -> m b) -> t a -> m (t b)
+
+val unOption : a ::: Type -> b ::: Type -> b -> (a -> b) -> option a -> b
+
+(* `guard` is generally useful in a monadic context, but only when the monad is
+also an `Alternative`.  Ur/Web doesn't have `Alternative` (or `Monoid`) yet, so
+we stick it here. *)
+val guard : bool -> option unit
