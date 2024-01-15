@@ -90,9 +90,9 @@ fun skipRealSpaces (s : string) : string =
         s
 
 fun toJson [a] (j : json a) : a -> string = j.ToJson
-fun fromJsonO' [a] (j : json a) : string -> result (a * string) = j.FromJson
+fun fromJsonR' [a] (j : json a) : string -> result (a * string) = j.FromJson
 
-fun fromJsonO [a] (j : json a) (s : string) : result a =
+fun fromJsonR [a] (j : json a) (s : string) : result a =
     (v, s') <- j.FromJson (skipSpaces s);
     resultGuard (String.all Char.isSpace s')
         <xml>Extra content at end of JSON record: {[s']}</xml>;
@@ -100,7 +100,7 @@ fun fromJsonO [a] (j : json a) (s : string) : result a =
 
 fun fromJson' [a] (j : json a) : string -> a * string = j.FromJson >>> resultErrorGet
 
-fun fromJson [a] (j : json a) : string -> a = @@fromJsonO [a] j >>> resultErrorGet
+fun fromJson [a] (j : json a) : string -> a = @@fromJsonR [a] j >>> resultErrorGet
 
 fun toYaml [a] (j : json a) : a -> string = j.ToYaml 0
 

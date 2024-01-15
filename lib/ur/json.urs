@@ -6,8 +6,9 @@ val toJson : a ::: Type -> json a -> a -> string
 val fromJson : a ::: Type -> json a -> string -> a
 val fromJson' : a ::: Type -> json a -> string -> a * string
 
-val fromJsonO : a ::: Type -> json a -> string -> result a
-val fromJsonO' : a ::: Type -> json a -> string -> result (a * string)
+(* Versions of fromJson that return a `result` instead of erroring on failure. *)
+val fromJsonR : a ::: Type -> json a -> string -> result a
+val fromJsonR' : a ::: Type -> json a -> string -> result (a * string)
 
 val toYaml : a ::: Type -> json a -> a -> string
 val fromYaml : a ::: Type -> json a -> string -> a
