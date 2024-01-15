@@ -14,6 +14,7 @@ val foldr : a ::: Type -> b ::: Type -> (a -> b -> b) -> b -> t a -> b
 
 val length : a ::: Type -> t a -> int
 
+(* Careful, this is linear time *)
 val snoc : a ::: Type -> t a -> a -> t a
 
 val rev : a ::: Type -> t a -> t a
