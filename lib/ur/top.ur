@@ -51,6 +51,15 @@ end
 
 fun not b = if b then False else True
 
+datatype result r = Success of r | Failure of xbody
+
+val result_monad = mkMonad
+    {Return = @@Success,
+     Bind = fn [a] [b] (m1 : result a) (m2 : a -> result b) =>
+        case m1 of
+            Failure e => Failure e
+          | Success v => m2 v}
+
 con ident = K ==> fn t :: K => t
 con record (t :: {Type}) = $t
 con fst = K1 ==> K2 ==> fn t :: (K1 * K2) => t.1
@@ -156,7 +165,7 @@ fun foldR2 [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tr :: {K} -> Type]
                        tf1 t -> tf2 t -> tr rest -> tr ([nm = t] ++ rest))
             (i : tr []) [r ::: {K}] (fl : folder r) =
     fl [fn r :: {K} => $(map tf1 r) -> $(map tf2 r) -> tr r]
-       (fn [nm :: Name] [t :: K] [rest :: {K}] [[nm] ~ rest] 
+       (fn [nm :: Name] [t :: K] [rest :: {K}] [[nm] ~ rest]
                         (acc : _ -> _ -> tr rest) r1 r2 =>
            f [nm] [t] [rest] r1.nm r2.nm (acc (r1 -- nm) (r2 -- nm)))
        (fn _ _ => i)
@@ -167,7 +176,7 @@ fun foldR3 [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type] [tr :: {
                        tf1 t -> tf2 t -> tf3 t -> tr rest -> tr ([nm = t] ++ rest))
             (i : tr []) [r ::: {K}] (fl : folder r) =
     fl [fn r :: {K} => $(map tf1 r) -> $(map tf2 r) -> $(map tf3 r) -> tr r]
-       (fn [nm :: Name] [t :: K] [rest :: {K}] [[nm] ~ rest] 
+       (fn [nm :: Name] [t :: K] [rest :: {K}] [[nm] ~ rest]
                         (acc : _ -> _ -> _ -> tr rest) r1 r2 r3 =>
            f [nm] [t] [rest] r1.nm r2.nm r3.nm (acc (r1 -- nm) (r2 -- nm) (r3 -- nm)))
        (fn _ _ _ => i)
@@ -178,7 +187,7 @@ fun foldR4 [K] [tf1 :: K -> Type] [tf2 :: K -> Type] [tf3 :: K -> Type] [tf4 :: 
                        tf1 t -> tf2 t -> tf3 t -> tf4 t -> tr rest -> tr ([nm = t] ++ rest))
             (i : tr []) [r ::: {K}] (fl : folder r) =
     fl [fn r :: {K} => $(map tf1 r) -> $(map tf2 r) -> $(map tf3 r) -> $(map tf4 r) -> tr r]
-       (fn [nm :: Name] [t :: K] [rest :: {K}] [[nm] ~ rest] 
+       (fn [nm :: Name] [t :: K] [rest :: {K}] [[nm] ~ rest]
                         (acc : _ -> _ -> _ -> _ -> tr rest) r1 r2 r3 r4 =>
            f [nm] [t] [rest] r1.nm r2.nm r3.nm r4.nm (acc (r1 -- nm) (r2 -- nm) (r3 -- nm) (r4 -- nm)))
        (fn _ _ _ _ => i)
