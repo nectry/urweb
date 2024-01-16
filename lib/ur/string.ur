@@ -112,9 +112,18 @@ fun trim s =
             ""
     end
 
+
+(* Copied from Char because urweb/lib modules don't know about each other. *)
+fun toHex ch =
+    if Basis.isdigit ch then
+        Basis.ord ch - Basis.ord #"0"
+    else if Basis.isxdigit ch then
+        Basis.ord ch - Basis.ord (if Basis.isupper ch then #"A" else #"a") + 10
+    else
+        Basis.error <xml>String's version of Char.toHex: Invalid hexadecimal digit "{[ch]}"</xml>
+
 fun parseHex (s : string) : int =
   let fun byDigit x acc =
         if x = length s then acc
-        else byDigit (x+1) (16 * acc + Char.toHex (sub s x))
+        else byDigit (x+1) (16 * acc + toHex (sub s x))
   in byDigit 0 0 end
-
