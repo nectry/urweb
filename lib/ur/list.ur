@@ -508,6 +508,16 @@ fun replaceNth [a] (ls : list a) (n : int) (v : a) : list a =
         repNth ls n []
     end
 
+fun findIndex [a] (f : a -> bool) : list a -> option int =
+    let
+        fun findIndex' (i : int) (ls : list a) =
+            case ls of
+                [] => None
+              | a :: ls => if f a then Some i else findIndex' (i + 1) ls
+    in
+        findIndex' 0
+    end
+
 fun assoc [a] [b] (_ : eq a) (x : a) =
     let
         fun assoc' (ls : list (a * b)) =

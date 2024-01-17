@@ -55,10 +55,13 @@ fun get [a] (x : a) (o : option a) =
         None => x
       | Some v => v
 
-fun unsafeGet [a] (o : option a) =
+(* Like unsafeGet but one can provide a custom error message. *)
+fun getOrError [a] (message : xbody) (o : option a) : a =
     case o of
-        None   => error <xml>Option.unsafeGet: encountered None</xml>
+        None   => error message
       | Some v => v
+
+val unsafeGet [a] = getOrError <xml>Option.unsafeGet: encountered None</xml>
 
 fun mapM [m] (_ : monad m) [a] [b] (f : a -> m b) (x : t a) : m (t b) =
     case x of

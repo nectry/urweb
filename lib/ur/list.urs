@@ -116,6 +116,10 @@ val sort : a ::: Type -> (a -> a -> bool) (* > predicate *) -> t a -> t a
 val nth : a ::: Type -> list a -> int -> option a
 val replaceNth : a ::: Type -> list a -> int -> a -> list a
 
+(* The spiritual opposite of `nth`, this returns the index of the first
+successful match in the list. *)
+val findIndex : a ::: Type -> (a -> bool) -> t a -> option int
+
 (** Association lists *)
 
 val assoc : a ::: Type -> b ::: Type -> eq a -> a -> t (a * b) -> option b

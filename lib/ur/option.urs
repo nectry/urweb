@@ -13,6 +13,7 @@ val app : m ::: (Type -> Type) -> a ::: Type -> monad m -> (a -> m {}) -> t a ->
 val bind : a ::: Type -> b ::: Type -> (a -> option b) -> t a -> t b
 
 val get : a ::: Type -> a -> option a -> a
+val getOrError : a ::: Type -> xbody -> option a -> a
 val unsafeGet : a ::: Type -> option a -> a
 
 val mapM : m ::: (Type -> Type) -> monad m -> a ::: Type -> b ::: Type -> (a -> m b) -> t a -> m (t b)
