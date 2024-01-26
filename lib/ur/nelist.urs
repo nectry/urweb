@@ -32,6 +32,9 @@ val mapX : a ::: Type -> ctx ::: {Unit} -> (a -> xml ctx [] []) -> t a -> xml ct
 
 (** Search for elements matching a predicate *)
 
+val mem : a ::: Type -> eq a -> a -> t a -> bool
+(* Membership test *)
+
 val exists : a ::: Type -> (a -> bool) -> t a -> bool
 (* Garden variety *)
 

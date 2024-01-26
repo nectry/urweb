@@ -387,6 +387,16 @@ fun all [a] f =
         all'
     end
 
+fun any [a] f =
+    let
+        fun any' ls =
+            case ls of
+                [] => False
+              | x :: ls => f x || any' ls
+    in
+        any'
+    end
+
 fun allM [m] (_ : monad m) [a] f =
     let
         fun all' ls =

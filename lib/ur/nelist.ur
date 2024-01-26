@@ -35,6 +35,9 @@ fun mapX [a] [ctx] (f : a -> xml ctx [] []) (nel : t a) : xml ctx [] [] = <xml>
   {List.mapX f nel.Rest}
 </xml>
 
+fun mem [a] (_ : eq a) (a : a) (nelist : t a) : bool =
+  nelist.First = a || List.mem a nelist.Rest
+
 fun exists [a] (f : a -> bool) (nel : t a) : bool =
     f nel.First || List.exists f nel.Rest
 
