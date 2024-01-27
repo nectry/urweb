@@ -1206,26 +1206,7 @@ eapps  : eterm                          (eterm)
        | eapps LBRACK cexp RBRACK       (ECApp (eapps, cexp), s (eappsleft, RBRACKright))
        | eapps BANG                     (EDisjointApp eapps, s (eappsleft, BANGright))
 
-eexp   : eapps                          (case #1 eapps of
-                                             EApp ((EVar ([], "CLASS", _), _), (EPrim (Prim.String (_, s)), loc)) => parseClass s loc
-                                           | EApp ((EVar ([], "STYLE", _), _), (EPrim (Prim.String (_, s)), loc)) => parseStyle s loc
-                                           | _ => eapps)
-       | FN eargs DARROW eexp           (let
-                                             val loc = s (FNleft, eexpright)
-                                         in
-                                             #1 (eargs (eexp, (CWild (KType, loc), loc)))
-                                         end)
-       | CSYMBOL DKARROW eexp           (EKAbs (CSYMBOL, eexp), s (CSYMBOLleft, eexpright))
-       | eexp COLON cexp                (EAnnot (eexp, cexp), s (eexpleft, cexpright))
-       | eexp MINUSMINUS cexp           (ECut (eexp, cexp), s (eexpleft, cexpright))
-       | eexp MINUSMINUSMINUS cexp      (ECutMulti (eexp, cexp), s (eexpleft, cexpright))
-       | CASE eexp OF barOpt branch branchs (ECase (eexp, branch :: branchs), s (CASEleft, branchsright))
-       | IF eexp THEN eexp ELSE eexp    (let
-                                             val loc = s (IFleft, eexp3right)
-                                         in
-                                             (ECase (eexp1, [((PCon (["Basis"], "True", NONE), loc), eexp2),
-                                                             ((PCon (["Basis"], "False", NONE), loc), eexp3)]), loc)
-                                         end)
+eexp   : eexpb
        | bind SEMI eexp                 (let
                                              val loc = s (bindleft, eexpright)
                                              val (p, to, e1) = bind
@@ -1240,26 +1221,47 @@ eexp   : eapps                          (case #1 eapps of
                                          in
                                              (EApp (e, f), loc)
                                          end)
-       | eexp EQ eexp                   (native_op ("eq", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp NE eexp                   (native_op ("ne", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | FN eargs DARROW eexp           (let
+                                             val loc = s (FNleft, eexpright)
+                                         in
+                                             #1 (eargs (eexp, (CWild (KType, loc), loc)))
+                                         end)
+       | CSYMBOL DKARROW eexp           (EKAbs (CSYMBOL, eexp), s (CSYMBOLleft, eexpright))
+       | eexp COLON cexp                (EAnnot (eexp, cexp), s (eexpleft, cexpright))
+       | CASE eexp OF barOpt branch branchs (ECase (eexp, branch :: branchs), s (CASEleft, branchsright))
+       | IF eexp THEN eexp ELSE eexp    (let
+                                             val loc = s (IFleft, eexp3right)
+                                         in
+                                             (ECase (eexp1, [((PCon (["Basis"], "True", NONE), loc), eexp2),
+                                                             ((PCon (["Basis"], "False", NONE), loc), eexp3)]), loc)
+                                         end)
+
+eexpb  : eapps                          (case #1 eapps of
+                                             EApp ((EVar ([], "CLASS", _), _), (EPrim (Prim.String (_, s)), loc)) => parseClass s loc
+                                           | EApp ((EVar ([], "STYLE", _), _), (EPrim (Prim.String (_, s)), loc)) => parseStyle s loc
+                                           | _ => eapps)
+       | eexpb MINUSMINUS cexp          (ECut (eexp, cexp), s (eexpleft, cexpright))
+       | eexpb MINUSMINUSMINUS cexp     (ECutMulti (eexp, cexp), s (eexpleft, cexpright))
+       | eexpb EQ eexpb                 (native_op ("eq", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb NE eexpb                 (native_op ("ne", eexp1, eexp2, s (eexp1left, eexp2right)))
        | MINUS eterm                    (native_unop ("neg", eterm, s (MINUSleft, etermright)))
-       | eexp PLUS eexp                 (native_op ("plus", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp MINUS eexp                (native_op ("minus", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eapps STAR eexp                (native_op ("times", eapps, eexp, s (eappsleft, eexpright)))
-       | eexp DIVIDE eexp               (native_op ("divide", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp MOD eexp                  (native_op ("mod", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb PLUS eexpb               (native_op ("plus", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb MINUS eexpb              (native_op ("minus", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eapps STAR eexpb               (native_op ("times", eapps, eexp, s (eappsleft, eexpright)))
+       | eexpb DIVIDE eexpb             (native_op ("divide", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb MOD eexpb                (native_op ("mod", eexp1, eexp2, s (eexp1left, eexp2right)))
 
-       | eexp LT eexp                   (native_op ("lt", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp LE eexp                   (native_op ("le", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp GT eexp                   (native_op ("gt", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp GE eexp                   (native_op ("ge", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb LT eexpb                 (native_op ("lt", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb LE eexpb                 (native_op ("le", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb GT eexpb                 (native_op ("gt", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb GE eexpb                 (native_op ("ge", eexp1, eexp2, s (eexp1left, eexp2right)))
 
-       | eexp FWDAPP eexp               (EApp (eexp1, eexp2), s (eexp1left, eexp2right))
-       | eexp REVAPP eexp               (EApp (eexp2, eexp1), s (eexp1left, eexp2right))
-       | eexp COMPOSE eexp              (top_binop ("compose", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp ANDTHEN eexp              (top_binop ("compose", eexp2, eexp1, s (eexp1left, eexp2right)))
-       | eexp BIND eexp                 (native_op ("bind", eexp1, eexp2, s (eexp1left, eexp2right)))
-       | eexp BACKTICK_PATH eexp        (let
+       | eexpb FWDAPP eexpb             (EApp (eexp1, eexp2), s (eexp1left, eexp2right))
+       | eexpb REVAPP eexpb             (EApp (eexp2, eexp1), s (eexp1left, eexp2right))
+       | eexpb COMPOSE eexpb            (top_binop ("compose", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb ANDTHEN eexpb            (top_binop ("compose", eexp2, eexp1, s (eexp1left, eexp2right)))
+       | eexpb BIND eexpb               (native_op ("bind", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb BACKTICK_PATH eexpb      (let
                                                 val path = String.tokens (fn ch => ch = #".") BACKTICK_PATH
                                                 val pathModules = List.take (path, (length path -1))
                                                 val pathOp = List.last path
@@ -1271,7 +1273,7 @@ eexp   : eapps                          (case #1 eapps of
                                                 (EApp (e, eexp2), s (eexp1left, eexp2right))
                                         end)
 
-       | eexp ANDALSO eexp              (let
+       | eexpb ANDALSO eexpb            (let
                                              val loc = s (eexp1left, eexp2right)
                                          in
                                              (ECase (eexp1, [((PCon (["Basis"], "True", NONE), loc),
@@ -1279,7 +1281,7 @@ eexp   : eapps                          (case #1 eapps of
                                                              ((PCon (["Basis"], "False", NONE), loc),
                                                               (EVar (["Basis"], "False", Infer), loc))]), loc)
                                          end)
-       | eexp ORELSE eexp               (let
+       | eexpb ORELSE eexpb             (let
                                              val loc = s (eexp1left, eexp2right)
                                          in
                                              (ECase (eexp1, [((PCon (["Basis"], "True", NONE), loc),
@@ -1288,11 +1290,11 @@ eexp   : eapps                          (case #1 eapps of
                                                               eexp2)]), loc)
                                          end)
 
-       | eexp PLUSPLUS eexp             (EConcat (eexp1, eexp2), s (eexp1left, eexp2right))
+       | eexpb PLUSPLUS eexpb           (EConcat (eexp1, eexp2), s (eexp1left, eexp2right))
 
-       | eexp CARET eexp                (native_op ("strcat", eexp1, eexp2, s (eexp1left, eexp2right)))
+       | eexpb CARET eexpb              (native_op ("strcat", eexp1, eexp2, s (eexp1left, eexp2right)))
 
-       | eapps DCOLON eexp              (let
+       | eapps DCOLON eexpb             (let
                                              val loc = s (eappsleft, eexpright)
                                          in
                                              (EApp ((EVar (["Basis"], "Cons", Infer), loc),
@@ -1302,7 +1304,7 @@ eexp   : eapps                          (case #1 eapps of
                                                                 eexp)], false), loc)), loc)
                                          end)
 
-bind   : eapps LARROW eapps             (patternOut eapps1, NONE, eapps2)
+bind   : eapps LARROW eexpb             (patternOut eapps1, NONE, eapps2)
        | eapps                          (let
                                              val loc = s (eappsleft, eappsright)
                                          in
