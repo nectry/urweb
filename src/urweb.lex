@@ -381,6 +381,7 @@ xint = x[0-9a-fA-F][0-9a-fA-F];
 
 <INITIAL> "<<<"       => (Tokens.COMPOSE (pos yypos, pos yypos + size yytext));
 <INITIAL> ">>>"       => (Tokens.ANDTHEN (pos yypos, pos yypos + size yytext));
+<INITIAL> ">>="       => (Tokens.BIND (pos yypos, pos yypos + size yytext));
 <INITIAL> "<|"        => (Tokens.FWDAPP (pos yypos, pos yypos + size yytext));
 <INITIAL> "|>"        => (Tokens.REVAPP (pos yypos, pos yypos + size yytext));
 
@@ -558,7 +559,7 @@ xint = x[0-9a-fA-F][0-9a-fA-F];
                          end);
 
 <INITIAL> {intconst}  => (let val v = (Int64.fromString yytext) handle Overflow => NONE
-                          in 
+                          in
                           case v of
                               SOME x => Tokens.INT (x, pos yypos, pos yypos + size yytext)
                             | NONE   => (ErrorMsg.errorAt' (pos yypos, pos yypos)

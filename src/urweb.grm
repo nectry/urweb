@@ -16,7 +16,7 @@
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
  * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
@@ -102,7 +102,7 @@ fun amend_select loc (si, (count, tabs, exps)) =
                 ()
             else
                 ErrorMsg.errorAt loc ("Select of field " ^ nameString fx ^ " from unbound table " ^ nameString tx);
-            
+
             (count, tabs, exps)
         end
       | Fields (tx, fs) =>
@@ -126,7 +126,7 @@ fun amend_select loc (si, (count, tabs, exps)) =
                 ()
             else
                 ErrorMsg.errorAt loc "Select of field from unbound table";
-            
+
             (count, tabs, exps)
         end
       | StarFields tx =>
@@ -402,7 +402,7 @@ fun patternOut (e : exp) =
  | CCONSTRAINT | UNIQUE | CHECK | PRIMARY | FOREIGN | KEY | ON | NO | ACTION | RESTRICT | CASCADE | REFERENCES
  | JOIN | INNER | CROSS | OUTER | LEFT | RIGHT | FULL
  | CIF | CTHEN | CELSE
- | FWDAPP | REVAPP | COMPOSE | ANDTHEN
+ | FWDAPP | REVAPP | COMPOSE | ANDTHEN | BIND
  | BACKTICK_PATH of string
 
 %nonterm
@@ -579,6 +579,7 @@ fun patternOut (e : exp) =
 %left REVAPP
 %right FWDAPP
 %left BACKTICK_PATH
+%left BIND
 %right COMPOSE ANDTHEN
 
 %right CARET PLUSPLUS
@@ -745,7 +746,7 @@ cstopt :                                (EVar (["Basis"], "no_constraint", Infer
 
 csts   : CCONSTRAINT tname cst          (let
                                              val loc = s (CCONSTRAINTleft, cstright)
-                                                       
+
                                              val e = (EVar (["Basis"], "one_constraint", Infer), loc)
                                              val e = (ECApp (e, tname), loc)
                                          in
@@ -763,7 +764,7 @@ csts   : CCONSTRAINT tname cst          (let
 
 cst    : UNIQUE tnames                  (let
                                              val loc = s (UNIQUEleft, tnamesright)
-                                                       
+
                                              val e = (EVar (["Basis"], "unique", Infer), loc)
                                              val e = (ECApp (e, #1 (#1 tnames)), loc)
                                              val e = (ECApp (e, (CRecord (#2 tnames), loc)), loc)
@@ -1257,6 +1258,7 @@ eexp   : eapps                          (case #1 eapps of
        | eexp REVAPP eexp               (EApp (eexp2, eexp1), s (eexp1left, eexp2right))
        | eexp COMPOSE eexp              (top_binop ("compose", eexp1, eexp2, s (eexp1left, eexp2right)))
        | eexp ANDTHEN eexp              (top_binop ("compose", eexp2, eexp1, s (eexp1left, eexp2right)))
+       | eexp BIND eexp                 (native_op ("bind", eexp1, eexp2, s (eexp1left, eexp2right)))
        | eexp BACKTICK_PATH eexp        (let
                                                 val path = String.tokens (fn ch => ch = #".") BACKTICK_PATH
                                                 val pathModules = List.take (path, (length path -1))
@@ -1646,7 +1648,7 @@ xmlOne : NOTAGS                         (EApp ((EVar (["Basis"], "cdata", Infer)
                                          in
                                              (EApp (#5 tag, cdata), pos)
                                          end)
-         
+
        | tag GT xmlOpt END_TAG          (let
                                              fun tagOut s =
                                                  case s of
@@ -1764,7 +1766,7 @@ tagHead: BEGIN_TAG                      (let
                                               (EVar ([], bt, Infer), pos))
                                          end)
        | tagHead LBRACE cexp RBRACE     (#1 tagHead, (ECApp (#2 tagHead, cexp), s (tagHeadleft, RBRACEright)))
-                                          
+
 attrs  :                                (NONE, NONE, NONE, NONE, NONE, [], [])
        | attr attrs                     (let
                                              val loc = s (attrleft, attrsright)
@@ -1842,7 +1844,7 @@ attr   : SYMBOL EQ attrv                (case SYMBOL of
                                              Normal ((CName (makeAttr SYMBOL), loc),
                                                      (EVar (["Basis"], "True", Infer), loc))
                                          end)
-                
+
 attrv  : INT                            (EPrim (Prim.Int INT), s (INTleft, INTright))
        | FLOAT                          (EPrim (Prim.Float FLOAT), s (FLOATleft, FLOATright))
        | STRING                         (EPrim (Prim.String (Prim.Normal, STRING)), s (STRINGleft, STRINGright))
@@ -1970,7 +1972,7 @@ query1 : SELECT dopt select FROM tables wopt gopt hopt
 tables : fitem                          (fitem)
        | fitem COMMA tables             (let
                                              val loc = s (fitemleft, tablesright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_from_comma", Infer), loc)
                                              val e = (EApp (e, #2 fitem), loc)
                                          in
@@ -1982,7 +1984,7 @@ fitem  : table'                         ([#1 table'], #2 table')
        | LBRACE LBRACE eexp RBRACE RBRACE (tnamesOf eexp, eexp)
        | fitem JOIN fitem ON sqlexp     (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_inner_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -1992,7 +1994,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem INNER JOIN fitem ON sqlexp (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_inner_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2002,7 +2004,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem CROSS JOIN fitem         (let
                                              val loc = s (fitem1left, fitem2right)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_inner_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2013,7 +2015,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem LEFT JOIN fitem ON sqlexp (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_left_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2023,7 +2025,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem LEFT OUTER JOIN fitem ON sqlexp (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_left_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2033,7 +2035,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem RIGHT JOIN fitem ON sqlexp (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_right_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2043,7 +2045,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem RIGHT OUTER JOIN fitem ON sqlexp (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_right_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2053,7 +2055,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem FULL JOIN fitem ON sqlexp (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_full_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2063,7 +2065,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | fitem FULL OUTER JOIN fitem ON sqlexp (let
                                              val loc = s (fitem1left, sqlexpright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_full_join", Infer), loc)
                                              val e = (EApp (e, #2 fitem1), loc)
                                              val e = (EApp (e, #2 fitem2), loc)
@@ -2073,7 +2075,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | LPAREN query RPAREN AS tname   (let
                                              val loc = s (LPARENleft, RPARENright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_from_query", Infer), loc)
                                              val e = (ECApp (e, tname), loc)
                                          in
@@ -2081,7 +2083,7 @@ fitem  : table'                         ([#1 table'], #2 table')
                                          end)
        | LPAREN LBRACE LBRACE eexp RBRACE RBRACE RPAREN AS tname   (let
                                              val loc = s (LPARENleft, RPARENright)
-                                                       
+
                                              val e = (EVar (["Basis"], "sql_from_query", Infer), loc)
                                              val e = (ECApp (e, tname), loc)
                                          in
@@ -2196,7 +2198,7 @@ sqlexp : TRUE                           (sql_inject (EVar (["Basis"], "True", In
 
        | CIF sqlexp CTHEN sqlexp CELSE sqlexp (let
                                                    val loc = s (CIFleft, sqlexp3right)
-                                                   val e = (EVar (["Basis"], "sql_if_then_else", Infer), loc) 
+                                                   val e = (EVar (["Basis"], "sql_if_then_else", Infer), loc)
                                                in
                                                    (EApp ((EApp ((EApp (e, sqlexp1), loc), sqlexp2), loc), sqlexp3), loc)
                                                end)
@@ -2205,7 +2207,7 @@ sqlexp : TRUE                           (sql_inject (EVar (["Basis"], "True", In
                                                         s (LBRACEleft, RBRACEright)))
        | LPAREN sqlexp RPAREN           (sqlexp)
 
-       | NULL                           (sql_inject ((EVar (["Basis"], "None", Infer), 
+       | NULL                           (sql_inject ((EVar (["Basis"], "None", Infer),
                                                       s (NULLleft, NULLright))))
 
        | COUNT LPAREN STAR RPAREN window(let
@@ -2238,7 +2240,7 @@ sqlexp : TRUE                           (sql_inject (EVar (["Basis"], "True", In
                                            end)
        | sqlagg LPAREN sqlexp RPAREN window (let
                                                  val loc = s (sqlaggleft, RPARENright)
-                                                           
+
                                                  val e = (EVar (["Basis"], "sql_" ^ sqlagg, Infer), loc)
                                              in
                                                  case window of
