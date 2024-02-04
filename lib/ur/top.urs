@@ -25,6 +25,21 @@ val not : bool -> bool
 datatype result r = Success of r | Failure of xbody
 val result_monad : monad result
 
+(* Simple record accessor function.
+ * Really, I'd prefer this be syntax (perhaps `(.Name)`), but this at least
+   allows point free record accesses.  Expected Use: `List.mp (at [#1]) lst`,
+   which will convert `lst`, which is a list of tuples, into a list of the first
+   elements of those tuples. *)
+val at : nm :: Name -> t ::: Type -> ts ::: {Type} -> [[nm] ~ ts] => $([nm = t] ++ ts) -> t
+
+(* Given a particular field of a record and a function to apply to it, returns a
+   copy of that record with the one field udpated.
+   `f_on [#1]` is equivalent to Haskell's `first` over a tuple, but in ur/web, it
+   works on any length tuple, or any record with a field named "1". *)
+val f_on : nm :: Name -> t ::: Type -> t' ::: Type -> ts ::: {Type} -> [[nm] ~ ts] =>
+    (t -> t') -> $([nm = t] ++ ts) -> $([nm = t'] ++ ts)
+
+
 (* Type-level identity function *)
 con ident = K ==> fn t :: K => t
 

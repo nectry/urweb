@@ -51,6 +51,11 @@ end
 
 fun not b = if b then False else True
 
+fun at [nm :: Name] [t ::: Type] [ts ::: {Type}] [[nm] ~ ts] (r : $([nm = t] ++ ts)) : t = r.nm
+
+fun f_on [nm :: Name] [t ::: Type] [t' ::: Type] [ts ::: {Type}] [[nm] ~ ts]
+    (f : t -> t') (r : $([nm = t] ++ ts)) : $([nm = t'] ++ ts) = r -- nm ++ {nm = f r.nm}
+
 datatype result r = Success of r | Failure of xbody
 
 val result_monad = mkMonad
