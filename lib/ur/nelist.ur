@@ -8,12 +8,12 @@ fun toList [a] (nel : t a) : list a =
 
 fun fromList [a] (ls : list a) : t a =
     case ls of
-        [] => error <xml>Nelist.fromList: input not empty</xml>
+        [] => error <xml>Nelist.fromList: input empty</xml>
       | x :: ls' => {First = x, Rest = ls'}
 
 fun fromListResult [a] (ls : list a) : result (t a) =
     case ls of
-        [] => Failure <xml>Nelist.fromList: input not empty</xml>
+        [] => Failure <xml>Nelist.fromList: input empty</xml>
       | x :: ls' => Success {First = x, Rest = ls'}
 
 fun app [m] [a] (_ : monad m) (f : a -> m unit) (nel : t a) : m unit =
