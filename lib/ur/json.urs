@@ -17,6 +17,11 @@ val mkJson : a ::: Type -> {ToJson : a -> string,
                             FromJson : string -> result (a * string)} -> json a
 
 val json_string : json string
+(* NOTE: We don't follow the rules exactly on reading numeric values.
+Specifically, we are more lenient than the JSON standard as we allow quoted
+numbers as numbers.  We can do this because we interpret json based on a schema
+(i.e., the type) rather than discovering what the values are based on form
+alone. *)
 val json_int : json int
 val json_float : json float
 val json_bool : json bool
@@ -36,6 +41,14 @@ val json_record_withOptional : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
                                -> folder ots -> $(map json ots) -> $(map (fn _ => string) ots)
                                -> json $(ts ++ map option ots)
 val json_variant : ts ::: {Type} -> folder ts -> $(map json ts) -> $(map (fn _ => string) ts) -> json (variant ts)
+
+(* A version of json_variant that doesn't use labels.  This is generally a bad
+idea, as we can't tell apart two constructors that have the same payload, but
+it's used in certain APIs and so is useful to us. NOTE: This plays poorly with
+the note above for numeric types, as it means that a string containing a number
+may be treated as a number even though it's quoted and designed to be treated as
+a string *)
+val json_variant_anon : ts ::: {Type} -> folder ts -> $(map json ts) -> json (variant ts)
 
 val json_unit : json unit
 

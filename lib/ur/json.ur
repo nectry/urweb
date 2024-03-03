@@ -975,6 +975,25 @@ fun json_variant [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names 
      ToYaml = fn _ _ => error <xml>No YAML variants yet, please</xml>,
      FromYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>}
 
+fun json_variant_anon [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) : json (variant ts) = {
+    ToJson = fn v => match v
+      (@Top.mp [json] [fn t => t -> string]
+        (fn [t] (j : json t) (v : t) => j.ToJson v) fl jss),
+    FromJson = fn s =>
+      (@foldR [json]
+        [fn ts => ts' :: {Type} -> [ts ~ ts'] => result (variant (ts ++ ts') * string)]
+        (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest] (j : json t)
+          (acc : ts' :: {Type} -> [rest ~ ts'] => result (variant (rest ++ ts') * string)) [fwd ::_] [[nm = t] ++ rest ~ fwd] =>
+            case acc [fwd] of
+              Success x => acc [fwd ++ [nm = t]]
+            | Failure x => (case j.FromJson s of
+                Success (v, s') => Success (make [nm] v, s')
+              | Failure _ => Failure x))
+        (fn [fwd ::_] [[] ~ fwd] => Failure <xml>Unknown anonymous JSON variant</xml>)
+        fl jss) [[]] !,
+     ToYaml = fn _ _ => error <xml>No YAML variants yet, please</xml>,
+     FromYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>}
+
 val json_unit : json unit = json_record {} {}
 
 fun json_dict [a] (j : json a) : json (list (string * a)) = {
