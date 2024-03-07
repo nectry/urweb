@@ -70,6 +70,11 @@ val filterM : m ::: (Type -> Type) -> monad m -> a ::: Type
 val foldlMap : a ::: Type -> b ::: Type -> c ::: Type
                -> (a -> b -> c * b) -> b -> t a -> t c * b
 
+(* A version of foldlMap in a monadic context *)
+val foldlMapM : m ::: (Type -> Type) -> monad m
+  -> a ::: Type -> b ::: Type -> c ::: Type
+  -> (a -> b -> m (c * b)) -> b -> t a -> m (t c * b)
+
 val mem : a ::: Type -> eq a -> a -> t a -> bool
 
 val find : a ::: Type -> (a -> bool) -> t a -> option a

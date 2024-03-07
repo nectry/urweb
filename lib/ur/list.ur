@@ -275,6 +275,18 @@ fun foldlMap [a] [b] [c] f =
         fold []
     end
 
+fun foldlMapM [m] (_ : monad m) [a] [b] [c] f =
+    let
+        fun fold ls' st ls =
+            case ls of
+                [] => return (rev ls', st)
+              | x :: ls =>
+                (y, st) <- f x st;
+                fold (y :: ls') st ls
+    in
+        fold []
+    end
+
 fun mem [a] (_ : eq a) (x : a) =
     let
         fun mm ls =
