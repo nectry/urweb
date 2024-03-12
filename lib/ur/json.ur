@@ -249,10 +249,15 @@ is the string that's been read and the second is the rest to continue parsing. *
 fun readMultilineYaml (i : int) (s : string) : result (string * string) =
   resultGuard (String.lengthGe s 2)
     <xml>Multiline YAML string ends too early.</xml>;
+  (* NOTE: If we try to do `Success ToSpaces` on the next line, we hit a
+  compiler error: `unhandled exception: UnboundNamed` in monoize.  Until the
+  compiler is fixed, we perform this workaround of returning a boolean and
+  turning it into a block_style on the following line. *)
   block <- (case String.sub s 0 of
-      #">" => Success ToSpaces
-    | #"|" => Success KeepNewlines
-    | c => Failure <xml>Multiline YAML string starts with unknown character: {[c]}.</xml>);
+      #">" => Success True
+    | #"|" => Success False
+    | _ => Failure <xml>Multiline YAML string starts with unknown character: .</xml>);
+  block <- return (if block then ToSpaces else KeepNewlines);
   chomp <- return (case String.sub s 1 of
       #"-" => NoNewline
     | #"+" => AllNewlines
