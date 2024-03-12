@@ -13,6 +13,11 @@ val fromJsonR' : a ::: Type -> json a -> string -> result (a * string)
 val toYaml : a ::: Type -> json a -> a -> string
 val fromYaml : a ::: Type -> json a -> string -> a
 
+(* Versions of fromJson that return a `result` instead of erroring on failure. *)
+val fromYamlR : a ::: Type -> json a -> string -> result a
+val fromYamlR' : a ::: Type -> json a -> string -> result (a * string)
+
+
 val mkJson : a ::: Type -> {ToJson : a -> string,
                             FromJson : string -> result (a * string)} -> json a
 
@@ -40,6 +45,14 @@ val json_record_withOptional : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
                                => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
                                -> folder ots -> $(map json ots) -> $(map (fn _ => string) ots)
                                -> json $(ts ++ map option ots)
+(* val json_record_withDefaults
+  : ts ::: {Type} -> dts ::: {Type} -> [ts ~ dts]
+  => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
+  -> folder dts -> $(map json dts) -> $(map (fn t => string * t) dts)
+  -> json $(ts ++ dts)
+
+Write json_record_withOptional simply using this *)
+
 val json_variant : ts ::: {Type} -> folder ts -> $(map json ts) -> $(map (fn _ => string) ts) -> json (variant ts)
 
 (* A version of json_variant that doesn't use labels.  This is generally a bad

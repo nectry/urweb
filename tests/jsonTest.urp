@@ -3,5 +3,5 @@ rewrite all JsonTest/*
 $/char
 $/string
 $/list
-$/json
+../lib/ur/json
 jsonTest

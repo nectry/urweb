@@ -32,6 +32,7 @@ fun main () : transaction page = return <xml><body>
   <pre>{[fromJson "[1, 2, 3]" : list int]}</pre><br/>
   <pre>{[toJson ("hi" :: "bye\"" :: "hehe" :: [])]}</pre><br/>
   <pre>{[toJson {A = False, B = "35", C = 42}]}</pre><br/>
+  <pre>{[fromJson "{\"A\": false,\"C\": 42,\"B\": \"foo\"}" : $myRow]}</pre><br/>
   <pre>{[a1]}</pre><br/>
   <pre>{[a2]}</pre><br/>
   <pre>{[a3]}</pre><br/>
