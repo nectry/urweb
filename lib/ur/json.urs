@@ -40,27 +40,37 @@ val rfc3339_out : time -> string
 val rfc3339_in : string -> time
 val rfc3339_in' : string -> result time
 
+(* Make a json instance for a record by providing the label names *)
 val json_record : ts ::: {Type} -> folder ts -> $(map json ts) -> $(map (fn _ => string) ts) -> json $ts
-val json_record_withOptional : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
-                               => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
-                               -> folder ots -> $(map json ots) -> $(map (fn _ => string) ots)
-                               -> json $(ts ++ map option ots)
-(* val json_record_withDefaults
-  : ts ::: {Type} -> dts ::: {Type} -> [ts ~ dts]
+
+(* Make a json instance for a record where some fields are allowed to be
+optional.  For required fields, simply provide the label, but for optional
+fields, additionally provide the default value.  During serializing, if a field
+contains its default value, it will be omitted, and during parsing, any field
+that is missing will be filled in with its default value. *)
+val json_record_withDefaults
+  : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
   => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
-  -> folder dts -> $(map json dts) -> $(map (fn t => string * t) dts)
-  -> json $(ts ++ dts)
+  -> folder ots -> $(map json ots) -> $(map (fn t => string * t) ots)
+  -> json $(ts ++ ots)
 
-Write json_record_withOptional simply using this *)
+(* A specialization of json_record_withDefaults where all the optional fields
+are option types and their default values are `None`. *)
+val json_record_withOptional
+  : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
+  => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
+  -> folder ots -> $(map json ots) -> $(map (fn _ => string) ots)
+  -> json $(ts ++ map option ots)
 
+(* Make a json instance for a variant by providing the label names. *)
 val json_variant : ts ::: {Type} -> folder ts -> $(map json ts) -> $(map (fn _ => string) ts) -> json (variant ts)
 
 (* A version of json_variant that doesn't use labels.  This is generally a bad
 idea, as we can't tell apart two constructors that have the same payload, but
-it's used in certain APIs and so is useful to us. NOTE: This plays poorly with
-the note above for numeric types, as it means that a string containing a number
-may be treated as a number even though it's quoted and designed to be treated as
-a string *)
+it's used in certain APIs and so is useful to us. *)
+(* NOTE: This plays poorly with the note above for numeric types, as it means
+that a string containing a number may be treated as a number even though it's
+quoted and designed to be treated as a string *)
 val json_variant_anon : ts ::: {Type} -> folder ts -> $(map json ts) -> json (variant ts)
 
 val json_unit : json unit
@@ -88,6 +98,9 @@ functor Recursive (M : sig
     val json_r : json r
 end
 
+(* These `prim` values are deprecated and should not be used.  Their behavior
+can be reproduced (with better quality than these provide) using
+json_datatype_anon and a simple mkShow invocation. *)
 datatype prim = String of string | Int of int | Float of float | Bool of bool
 val json_prim : json prim
 val show_prim : show prim
@@ -101,6 +114,17 @@ val json_datatype :
     folder ts ->
     $(map json ts) ->
     $(map (fn _ => string) ts) ->
+    $(map (fn t' => t' -> t) ts) ->
+    (t -> variant ts) ->
+    json t
+
+(* An anonymous version of json_datatype.  Avoid it for the same reasons given
+for json_variant_anon *)
+val json_datatype_anon :
+    t ::: Type ->
+    ts ::: {Type} ->
+    folder ts ->
+    $(map json ts) ->
     $(map (fn t' => t' -> t) ts) ->
     (t -> variant ts) ->
     json t
