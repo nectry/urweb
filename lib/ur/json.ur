@@ -450,6 +450,10 @@ val json_bool = {
             Success (True, String.suffix s 4)
         else if String.isPrefix {Full = s, Prefix = "false"} then
             Success (False, String.suffix s 5)
+        else if String.isPrefix {Full = s, Prefix = "\"true\""} then
+            Success (False, String.suffix s 6)
+        else if String.isPrefix {Full = s, Prefix = "\"false\""} then
+            Success (False, String.suffix s 7)
         else
             Failure <xml>JSON: bad boolean string: {[s]}</xml>,
     ToYaml = fn _ b => if b then "True" else "False",
