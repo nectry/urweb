@@ -1,4 +1,4 @@
-(* Copyright (c) 2008, 2014, Adam Chlipala
+(* Copyright (c) 2008, 2014, 2024 Adam Chlipala
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,14 @@ signature PRIM = sig
 
     datatype string_mode = Normal | Html
 
+    type money = { Amount : Int64.int, NumFractional : int }
+    (* The second field gives the number of decimal digits devoted
+     * to fractional amounts of money (e.g., cents in the U.S.). *)
+
     datatype t =
              Int of Int64.int
            | Float of Real64.real
+           | Money of money
            | String of string_mode * string
            | Char of char
 

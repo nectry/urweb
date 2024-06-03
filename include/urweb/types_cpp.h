@@ -24,6 +24,11 @@ typedef uw_unit uw_Basis_unit;
 
 typedef enum uw_Basis_bool { uw_Basis_False, uw_Basis_True } uw_Basis_bool;
 
+typedef struct {
+  long long amount : 48;
+  unsigned num_fractional : 16;
+} uw_Basis_money;
+
 typedef uw_Basis_string uw_Basis_xhtml;
 typedef uw_Basis_string uw_Basis_page;
 typedef uw_Basis_string uw_Basis_xbody;

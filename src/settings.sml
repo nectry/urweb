@@ -574,6 +574,7 @@ fun getDebug () = !debug
 datatype sql_type =
          Int
        | Float
+       | Money
        | String
        | Char
        | Bool
@@ -591,6 +592,7 @@ fun p_sql_ctype t =
         case t of
             Int => "uw_Basis_int"
           | Float => "uw_Basis_float"
+          | Money => "uw_Basis_money"
           | String => "uw_Basis_string"
           | Char => "uw_Basis_char"
           | Bool => "uw_Basis_bool"

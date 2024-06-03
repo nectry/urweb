@@ -157,6 +157,7 @@ signature SETTINGS = sig
     datatype sql_type =
              Int
            | Float
+           | Money
            | String
            | Char
            | Bool

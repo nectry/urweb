@@ -1397,6 +1397,7 @@ fun sql_type_in env (tAll as (t, loc)) =
     case t of
         TFfi ("Basis", "int") => Int
       | TFfi ("Basis", "float") => Float
+      | TFfi ("Basis", "money") => Money
       | TFfi ("Basis", "string") => String
       | TFfi ("Basis", "char") => Char
       | TFfi ("Basis", "bool") => Bool

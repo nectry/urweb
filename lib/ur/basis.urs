@@ -1,5 +1,6 @@
 type int
 type float
+type money
 type string
 type char
 type time
@@ -28,6 +29,7 @@ val eq : t ::: Type -> eq t -> t -> t -> bool
 val ne : t ::: Type -> eq t -> t -> t -> bool
 val eq_int : eq int
 val eq_float : eq float
+val eq_money : eq money
 val eq_string : eq string
 val eq_char : eq char
 val eq_bool : eq bool
@@ -53,6 +55,7 @@ val gt : t ::: Type -> ord t -> t -> t -> bool
 val ge : t ::: Type -> ord t -> t -> t -> bool
 val ord_int : ord int
 val ord_float : ord float
+val ord_money : ord money
 val ord_string : ord string
 val ord_char : ord char
 val ord_bool : ord bool
@@ -106,6 +109,7 @@ class show
 val show : t ::: Type -> show t -> t -> string
 val show_int : show int
 val show_float : show float
+val show_money : show money
 val show_string : show string
 val show_char : show char
 val show_bool : show bool
@@ -118,6 +122,7 @@ val readError : t ::: Type -> read t -> string -> t
 (* [readError] calls [error] if the input is malformed. *)
 val read_int : read int
 val read_float : read float
+val read_money : read money
 val read_string : read string
 val read_char : read char
 val read_bool : read bool
@@ -272,6 +277,7 @@ class sql_injectable_prim
 val sql_bool : sql_injectable_prim bool
 val sql_int : sql_injectable_prim int
 val sql_float : sql_injectable_prim float
+val sql_money : sql_injectable_prim money
 val sql_string : sql_injectable_prim string
 val sql_char : sql_injectable_prim char
 val sql_time : sql_injectable_prim time
@@ -611,6 +617,7 @@ val sql_count_col : t ::: Type -> sql_aggregate (option t) int
 class sql_summable
 val sql_summable_int : sql_summable int
 val sql_summable_float : sql_summable float
+val sql_summable_money : sql_summable money
 val sql_summable_option : t ::: Type -> sql_summable t -> sql_summable (option t)
 val sql_avg : t ::: Type -> sql_summable t -> sql_aggregate t (option float)
 val sql_sum : t ::: Type -> nt ::: Type -> sql_summable t -> nullify t nt -> sql_aggregate t nt
@@ -618,6 +625,7 @@ val sql_sum : t ::: Type -> nt ::: Type -> sql_summable t -> nullify t nt -> sql
 class sql_maxable
 val sql_maxable_int : sql_maxable int
 val sql_maxable_float : sql_maxable float
+val sql_maxable_money : sql_maxable float
 val sql_maxable_string : sql_maxable string
 val sql_maxable_time : sql_maxable time
 val sql_maxable_option : t ::: Type -> sql_maxable t -> sql_maxable (option t)

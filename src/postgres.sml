@@ -38,6 +38,7 @@ fun p_sql_type t =
     case t of
         Int => "int8"
       | Float => "float8"
+      | Money => "money"
       | String => "text"
       | Char => "char"
       | Bool => "bool"
@@ -51,6 +52,7 @@ fun p_sql_type_base t =
     case t of
         Int => "bigint"
       | Float => "double precision"
+      | Money => "money"
       | String => "text"
       | Char => "character"
       | Bool => "boolean"
@@ -539,6 +541,7 @@ fun p_getcol {loc, wontLeakStrings, col = i, typ = t} =
             case t of
                 Int => box [string "uw_Basis_stringToInt_error(ctx, ", e, string ")"]
               | Float => box [string "uw_Basis_stringToFloat_error(ctx, ", e, string ")"]
+              | Money => box [string "uw_Basis_stringToMoney_error(ctx, ", e, string ")"]
               | String =>
                 if wontLeakStrings then
                     e
@@ -711,6 +714,7 @@ fun p_ensql t e =
     case t of
         Int => box [string "uw_Basis_attrifyInt(ctx, ", e, string ")"]
       | Float => box [string "uw_Basis_attrifyFloat(ctx, ", e, string ")"]
+      | Money => box [string "uw_Basis_attrifyMoney(ctx, ", e, string ")"]
       | String => e
       | Char => box [string "uw_Basis_attrifyChar(ctx, ", e, string ")"]
       | Bool => box [string "(", e, string " ? \"TRUE\" : \"FALSE\")"]

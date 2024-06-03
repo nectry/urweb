@@ -35,6 +35,7 @@ fun p_sql_type t =
     case t of
         Int => "bigint"
       | Float => "double"
+      | Money => raise Fail "MySQL doesn't support 'money' type"
       | String => "longtext"
       | Char => "char"
       | Bool => "bool"
@@ -48,6 +49,7 @@ fun p_buffer_type t =
     case t of
         Int => "MYSQL_TYPE_LONGLONG"
       | Float => "MYSQL_TYPE_DOUBLE"
+      | Money => raise Fail "MySQL doesn't support 'money' type"
       | String => "MYSQL_TYPE_STRING"
       | Char => "MYSQL_TYPE_STRING"
       | Bool => "MYSQL_TYPE_LONG"
@@ -61,6 +63,7 @@ fun p_sql_type_base t =
     case t of
         Int => "bigint"
       | Float => "double"
+      | Money => raise Fail "MySQL doesn't support 'money' type"
       | String => "longtext"
       | Char => "char"
       | Bool => "tinyint"

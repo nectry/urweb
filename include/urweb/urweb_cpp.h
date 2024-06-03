@@ -100,6 +100,7 @@ void uw_set_at_most_one_query(struct uw_context *, int);
 
 char *uw_Basis_htmlifyInt(struct uw_context *, uw_Basis_int);
 char *uw_Basis_htmlifyFloat(struct uw_context *, uw_Basis_float);
+char *uw_Basis_htmlifyMoney(struct uw_context *, uw_Basis_money);
 char *uw_Basis_htmlifyString(struct uw_context *, uw_Basis_string);
 char *uw_Basis_htmlifyBool(struct uw_context *, uw_Basis_bool);
 char *uw_Basis_htmlifyTime(struct uw_context *, uw_Basis_time);
@@ -108,6 +109,7 @@ char *uw_Basis_htmlifySource(struct uw_context *, uw_Basis_source);
 
 uw_unit uw_Basis_htmlifyInt_w(struct uw_context *, uw_Basis_int);
 uw_unit uw_Basis_htmlifyFloat_w(struct uw_context *, uw_Basis_float);
+uw_unit uw_Basis_htmlifyMoney_w(struct uw_context *, uw_Basis_money);
 uw_unit uw_Basis_htmlifyString_w(struct uw_context *, uw_Basis_string);
 uw_unit uw_Basis_htmlifyBool_w(struct uw_context *, uw_Basis_bool);
 uw_unit uw_Basis_htmlifyTime_w(struct uw_context *, uw_Basis_time);
@@ -116,6 +118,7 @@ uw_unit uw_Basis_htmlifySource_w(struct uw_context *, uw_Basis_source);
 
 char *uw_Basis_attrifyInt(struct uw_context *, uw_Basis_int);
 char *uw_Basis_attrifyFloat(struct uw_context *, uw_Basis_float);
+char *uw_Basis_attrifyMoney(struct uw_context *, uw_Basis_money);
 char *uw_Basis_attrifyString(struct uw_context *, uw_Basis_string);
 char *uw_Basis_attrifyChar(struct uw_context *, uw_Basis_char);
 char *uw_Basis_attrifyTime(struct uw_context *, uw_Basis_time);
@@ -125,11 +128,13 @@ char *uw_Basis_attrifyCss_class(struct uw_context *, uw_Basis_css_class);
 
 uw_unit uw_Basis_attrifyInt_w(struct uw_context *, uw_Basis_int);
 uw_unit uw_Basis_attrifyFloat_w(struct uw_context *, uw_Basis_float);
+uw_unit uw_Basis_attrifyMoney_w(struct uw_context *, uw_Basis_money);
 uw_unit uw_Basis_attrifyString_w(struct uw_context *, uw_Basis_string);
 uw_unit uw_Basis_attrifyChar_w(struct uw_context *, uw_Basis_char);
 
 char *uw_Basis_urlifyInt(struct uw_context *, uw_Basis_int);
 char *uw_Basis_urlifyFloat(struct uw_context *, uw_Basis_float);
+char *uw_Basis_urlifyMoney(struct uw_context *, uw_Basis_money);
 char *uw_Basis_urlifyString(struct uw_context *, uw_Basis_string);
 char *uw_Basis_urlifyBool(struct uw_context *, uw_Basis_bool);
 char *uw_Basis_urlifyTime(struct uw_context *, uw_Basis_time);
@@ -138,6 +143,7 @@ char *uw_Basis_urlifySource(struct uw_context *, uw_Basis_source);
 
 uw_unit uw_Basis_urlifyInt_w(struct uw_context *, uw_Basis_int);
 uw_unit uw_Basis_urlifyFloat_w(struct uw_context *, uw_Basis_float);
+uw_unit uw_Basis_urlifyMoney_w(struct uw_context *, uw_Basis_money);
 uw_unit uw_Basis_urlifyChar_w(struct uw_context *, uw_Basis_char);
 uw_unit uw_Basis_urlifyString_w(struct uw_context *, uw_Basis_string);
 uw_unit uw_Basis_urlifyBool_w(struct uw_context *, uw_Basis_bool);
@@ -148,6 +154,7 @@ uw_unit uw_Basis_urlifySource_w(struct uw_context *, uw_Basis_source);
 uw_Basis_unit uw_Basis_unurlifyUnit(struct uw_context * ctx, char **s);
 uw_Basis_int uw_Basis_unurlifyInt(struct uw_context *, char **);
 uw_Basis_float uw_Basis_unurlifyFloat(struct uw_context *, char **);
+uw_Basis_float uw_Basis_unurlifyMoney(struct uw_context *, char **);
 uw_Basis_string uw_Basis_unurlifyString(struct uw_context *, char **);
 uw_Basis_char uw_Basis_unurlifyChar(struct uw_context *, char **);
 uw_Basis_string uw_Basis_unurlifyString_fromClient(struct uw_context *, char **);
@@ -177,6 +184,7 @@ char *uw_memdup(struct uw_context *, const char *, size_t);
 
 uw_Basis_string uw_Basis_sqlifyInt(struct uw_context *, uw_Basis_int);
 uw_Basis_string uw_Basis_sqlifyFloat(struct uw_context *, uw_Basis_float);
+uw_Basis_string uw_Basis_sqlifyMoney(struct uw_context *, uw_Basis_money);
 uw_Basis_string uw_Basis_sqlifyString(struct uw_context *, uw_Basis_string);
 uw_Basis_string uw_Basis_sqlifyChar(struct uw_context *, uw_Basis_char);
 uw_Basis_string uw_Basis_sqlifyBool(struct uw_context *, uw_Basis_bool);
@@ -187,6 +195,7 @@ uw_Basis_string uw_Basis_sqlifyClient(struct uw_context *, uw_Basis_client);
 
 uw_Basis_string uw_Basis_sqlifyIntN(struct uw_context *, uw_Basis_int*);
 uw_Basis_string uw_Basis_sqlifyFloatN(struct uw_context *, uw_Basis_float*);
+uw_Basis_string uw_Basis_sqlifyMoneyN(struct uw_context *, uw_Basis_money*);
 uw_Basis_string uw_Basis_sqlifyStringN(struct uw_context *, uw_Basis_string);
 uw_Basis_string uw_Basis_sqlifyBoolN(struct uw_context *, uw_Basis_bool*);
 uw_Basis_string uw_Basis_sqlifyTimeN(struct uw_context *, uw_Basis_time*);
@@ -201,18 +210,21 @@ char *uw_Basis_jsifyTime(struct uw_context *, uw_Basis_time);
 
 uw_Basis_string uw_Basis_intToString(struct uw_context *, uw_Basis_int);
 uw_Basis_string uw_Basis_floatToString(struct uw_context *, uw_Basis_float);
+uw_Basis_string uw_Basis_moneyToString(struct uw_context *, uw_Basis_money);
 uw_Basis_string uw_Basis_charToString(struct uw_context *, uw_Basis_char);
 uw_Basis_string uw_Basis_boolToString(struct uw_context *, uw_Basis_bool);
 uw_Basis_string uw_Basis_timeToString(struct uw_context *, uw_Basis_time);
 
 uw_Basis_int *uw_Basis_stringToInt(struct uw_context *, uw_Basis_string);
 uw_Basis_float *uw_Basis_stringToFloat(struct uw_context *, uw_Basis_string);
+uw_Basis_money *uw_Basis_stringToMoney(struct uw_context *, uw_Basis_string);
 uw_Basis_char *uw_Basis_stringToChar(struct uw_context *, uw_Basis_string);
 uw_Basis_bool *uw_Basis_stringToBool(struct uw_context *, uw_Basis_string);
 uw_Basis_time *uw_Basis_stringToTime(struct uw_context *, const char *);
 
 uw_Basis_int uw_Basis_stringToInt_error(struct uw_context *, uw_Basis_string);
 uw_Basis_float uw_Basis_stringToFloat_error(struct uw_context *, uw_Basis_string);
+uw_Basis_money uw_Basis_stringToMoney_error(struct uw_context *, uw_Basis_string);
 uw_Basis_char uw_Basis_stringToChar_error(struct uw_context *, uw_Basis_string);
 uw_Basis_bool uw_Basis_stringToBool_error(struct uw_context *, uw_Basis_string);
 uw_Basis_time uw_Basis_stringToTime_error(struct uw_context *, const char *);
@@ -370,6 +382,10 @@ uw_Basis_time uw_Basis_stringToTimef_error(struct uw_context *, const char *fmt,
 uw_Basis_bool uw_Basis_eq_time(struct uw_context *, uw_Basis_time, uw_Basis_time);
 uw_Basis_bool uw_Basis_lt_time(struct uw_context *, uw_Basis_time, uw_Basis_time);
 uw_Basis_bool uw_Basis_le_time(struct uw_context *, uw_Basis_time, uw_Basis_time);
+
+uw_Basis_bool uw_Basis_eq_money(struct uw_context *, uw_Basis_money, uw_Basis_money);
+uw_Basis_bool uw_Basis_lt_money(struct uw_context *, uw_Basis_money, uw_Basis_money);
+uw_Basis_bool uw_Basis_le_money(struct uw_context *, uw_Basis_money, uw_Basis_money);
 
 void uw_buffer_init(size_t max, uw_buffer *, size_t initial);
 void uw_buffer_free(uw_buffer *);

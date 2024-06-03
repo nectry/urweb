@@ -1836,6 +1836,34 @@ char *uw_Basis_attrifyFloat(uw_context ctx, uw_Basis_float n) {
   return result;
 }
 
+static int npow10(int n) {
+  int r = 1;
+  while (n) {
+    r *= 10;
+    --n;
+  }
+  return r;
+}
+
+static long long money_whole(uw_Basis_money m, int p10) {
+  return m.amount / p10;
+}
+
+static long long money_frac(uw_Basis_money m, int p10) {
+  return (m.amount < 0 ? -m.amount : m.amount) % p10;
+}
+
+char *uw_Basis_attrifyMoney(uw_context ctx, uw_Basis_money m) {
+  char *result;
+  int len, p10 = npow10(m.num_fractional);
+  uw_check_heap(ctx, INTS_MAX + 1);
+  result = ctx->heap.front;
+  sprintf(result, "%lld.%0*lld%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
+  ctx->heap.front += len+1;
+  return result;
+}
+
 char *uw_Basis_attrifyString(uw_context ctx, uw_Basis_string s) {
   int len = strlen(s);
   char *result, *p;
@@ -1912,6 +1940,17 @@ uw_unit uw_Basis_attrifyFloat_w(uw_context ctx, uw_Basis_float n) {
   return uw_unit_v;
 }
 
+uw_unit uw_Basis_attrifyMoney_w(uw_context ctx, uw_Basis_money m) {
+  int len, p10 = npow10(m.num_fractional);
+
+  uw_check(ctx, INTS_MAX + 1);
+  sprintf(ctx->page.front, "%lld.%0*lld%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
+  ctx->page.front += len;
+
+  return uw_unit_v;
+}
+
 uw_unit uw_Basis_attrifyString_w(uw_context ctx, uw_Basis_string s) {
   uw_check(ctx, strlen(s) * 6);
 
@@ -1976,6 +2015,18 @@ char *uw_Basis_urlifyFloat(uw_context ctx, uw_Basis_float n) {
   uw_check_heap(ctx, FLOATS_MAX);
   r = ctx->heap.front;
   sprintf(r, "%g%n", n, &len);
+  ctx->heap.front += len+1;
+  return r;
+}
+
+char *uw_Basis_urlifyMoney(uw_context ctx, uw_Basis_money m) {
+  int len, p10 = npow10(m.num_fractional);
+  char *r;
+
+  uw_check_heap(ctx, INTS_MAX + 1);
+  r = ctx->heap.front;
+  sprintf(r, "%lld.%0*lld%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
   ctx->heap.front += len+1;
   return r;
 }
@@ -2086,11 +2137,12 @@ uw_unit uw_Basis_urlifyChannel_w(uw_context ctx, uw_Basis_channel chn) {
   return uw_unit_v;
 }
 
-uw_unit uw_Basis_urlifyFloat_w(uw_context ctx, uw_Basis_float n) {
-  int len;
+uw_unit uw_Basis_urlifyMoney_w(uw_context ctx, uw_Basis_money m) {
+  int len, p10 = npow10(m.num_fractional);
 
-  uw_check(ctx, FLOATS_MAX);
-  sprintf(ctx->page.front, "%g%n", n, &len);
+  uw_check(ctx, INTS_MAX + 1);
+  sprintf(ctx->page.front, "%lld.%0*lld%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
   ctx->page.front += len;
 
   return uw_unit_v;
@@ -2208,6 +2260,40 @@ uw_Basis_float uw_Basis_unurlifyFloat(uw_context ctx, char **s) {
   r = atof(*s);
   *s = new_s;
   return r;
+}
+
+static char *decomma_money(uw_context ctx, char *s) {
+  char *r, *p;
+  
+  r = uw_malloc(ctx, strlen(s)+1);
+
+  for (p = r; *s; ++s)
+    if (isdigit(*s) || *s == '-' || *s == '.')
+      *p++ = *s;
+  *p = 0;
+
+  return r;
+}
+
+uw_Basis_money uw_Basis_unurlifyMoney(uw_context ctx, char **s) {
+  char *p;
+  int len1, num_fractional;
+  long long whole, fractional;
+  uw_Basis_money m;
+  
+  char *new_s = uw_unurlify_advance(*s);
+
+  p = decomma_money(ctx, *s);
+
+  if (sscanf(p, "%lld.%n", &whole, &len1) != 1 || len1 <= 0)
+    uw_error(ctx, FATAL, "Malformed money value (whole part2)");
+  if (sscanf(p + len1, "%lld%n", &fractional, &num_fractional) != 1 || m.num_fractional < 0)
+    uw_error(ctx, FATAL, "Malformed money value (fractional part)");
+
+  *s = new_s;
+  m.num_fractional = num_fractional;
+  m.amount = whole * npow10(num_fractional) + (whole < 0 ? -fractional : fractional);
+  return m;
 }
 
 uw_Basis_time uw_Basis_unurlifyTime(uw_context ctx, char **s) {
@@ -2395,11 +2481,34 @@ char *uw_Basis_htmlifyFloat(uw_context ctx, uw_Basis_float n) {
   return r;
 }
 
+char *uw_Basis_htmlifyMoney(uw_context ctx, uw_Basis_money m) {
+  int len, p10 = npow10(m.num_fractional);
+  char *r;
+
+  uw_check_heap(ctx, INTS_MAX + 1);
+  r = ctx->heap.front;
+  sprintf(r, "%lld.%0*lld%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
+  ctx->heap.front += len+1;
+  return r;
+}
+
 uw_unit uw_Basis_htmlifyFloat_w(uw_context ctx, uw_Basis_float n) {
   int len;
 
   uw_check(ctx, FLOATS_MAX);
   sprintf(ctx->page.front, "%g%n", n, &len);
+  ctx->page.front += len;
+
+  return uw_unit_v;
+}
+
+uw_unit uw_Basis_htmlifyMoney_w(uw_context ctx, uw_Basis_money m) {
+  int len, p10 = npow10(m.num_fractional);
+
+  uw_check(ctx, INTS_MAX + 1);
+  sprintf(ctx->page.front, "%lld.%0*lld%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
   ctx->page.front += len;
 
   return uw_unit_v;
@@ -2835,11 +2944,30 @@ char *uw_Basis_sqlifyFloat(uw_context ctx, uw_Basis_float n) {
   return r;
 }
 
+char *uw_Basis_sqlifyMoney(uw_context ctx, uw_Basis_money m) {
+  int len, p10 = npow10(m.num_fractional);
+  char *r;
+
+  uw_check_heap(ctx, INTS_MAX + 11);
+  r = ctx->heap.front;
+  sprintf(r, "(%lld.%0*lld)::money%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
+  ctx->heap.front += len+1;
+  return r;
+}
+
 char *uw_Basis_sqlifyFloatN(uw_context ctx, uw_Basis_float *n) {
   if (n == NULL)
     return "NULL";
   else
     return uw_Basis_sqlifyFloat(ctx, *n);
+}
+
+char *uw_Basis_sqlifyMoneyN(uw_context ctx, uw_Basis_money *m) {
+  if (m == NULL)
+    return "NULL";
+  else
+    return uw_Basis_sqlifyMoney(ctx, *m);
 }
 
 int uw_Estrings = 1, uw_sql_type_annotations = 1;
@@ -3150,6 +3278,18 @@ uw_Basis_string uw_Basis_floatToString(uw_context ctx, uw_Basis_float n) {
   return r;
 }
 
+uw_Basis_string uw_Basis_moneyToString(uw_context ctx, uw_Basis_money m) {
+  int len, p10 = npow10(m.num_fractional);
+  char *r;
+
+  uw_check_heap(ctx, INTS_MAX + 1);
+  r = ctx->heap.front;
+  sprintf(r, "%lld.%0*lld%n", money_whole(m, p10),
+          m.num_fractional, money_frac(m, p10), &len);
+  ctx->heap.front += len+1;
+  return r;
+}
+
 uw_Basis_string uw_Basis_charToString(uw_context ctx, uw_Basis_char ch) {
   return uw_Basis_str1(ctx, ch);
 }
@@ -3204,6 +3344,25 @@ uw_Basis_float *uw_Basis_stringToFloat(uw_context ctx, uw_Basis_string s) {
     return r;
   } else
     return NULL;
+}
+
+uw_Basis_money *uw_Basis_stringToMoney(uw_context ctx, uw_Basis_string s) {
+  int len1, num_fractional;
+  long long whole, fractional;
+  uw_Basis_money m, *r;
+  
+  s = decomma_money(ctx, s);
+
+  if (sscanf(s, "%lld.%n", &whole, &len1) != 1 || len1 <= 0)
+    return NULL;
+  if (sscanf(s + len1, "%lld%n", &fractional, &num_fractional) != 1 || num_fractional < 0)
+    return NULL;
+
+  m.num_fractional = num_fractional;
+  m.amount = whole * npow10(num_fractional) + (whole < 0 ? -fractional : fractional);
+  r = uw_malloc(ctx, sizeof(uw_Basis_money));
+  *r = m;
+  return r;
 }
 
 uw_Basis_char *uw_Basis_stringToChar(uw_context ctx, uw_Basis_string s) {
@@ -3336,6 +3495,23 @@ uw_Basis_float uw_Basis_stringToFloat_error(uw_context ctx, uw_Basis_string s) {
     return n;
   else
     uw_error(ctx, FATAL, "Can't parse float: %s", uw_Basis_htmlifyString(ctx, s));
+}
+
+uw_Basis_money uw_Basis_stringToMoney_error(uw_context ctx, uw_Basis_string s) {
+  int len1, num_fractional;
+  long long whole, fractional;
+  uw_Basis_money m;
+  
+  s = decomma_money(ctx, s);
+
+  if (sscanf(s, "%lld.%n", &whole, &len1) != 1 || len1 <= 0)
+    uw_error(ctx, FATAL, "Malformed money value (whole part of %s)", s);
+  if (sscanf(s + len1, "%lld%n", &fractional, &num_fractional) != 1 || num_fractional < 0)
+    uw_error(ctx, FATAL, "Malformed money value (fractional part)");
+
+  m.num_fractional = num_fractional;
+  m.amount = whole * npow10(num_fractional) + (whole < 0 ? -fractional : fractional);
+  return m;
 }
 
 uw_Basis_char uw_Basis_stringToChar_error(uw_context ctx, uw_Basis_string s) {

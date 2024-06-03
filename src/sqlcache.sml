@@ -1254,6 +1254,7 @@ fun typOfExp' (env : MonoEnv.env) : exp' -> typ option =
  fn EPrim p => SOME (TFfi ("Basis", case p of
                                         Prim.Int _ => "int"
                                       | Prim.Float _ => "double"
+                                      | Prim.Money _ => "money"
                                       | Prim.String _ => "string"
                                       | Prim.Char _ => "char"),
                      dummyLoc)

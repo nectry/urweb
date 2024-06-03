@@ -35,6 +35,7 @@ fun p_sql_type t =
     case t of
         Int => "integer"
       | Float => "real"
+      | Money => raise Fail "SQLite doesn't support 'money' type"
       | String => "text"
       | Char => "text"
       | Bool => "integer"
@@ -417,6 +418,7 @@ fun p_getcol {loc, wontLeakStrings, col = i, typ = t} =
             case t of
                 Int => box [string "sqlite3_column_int64(stmt, ", string (Int.toString i), string ")"]
               | Float => box [string "sqlite3_column_double(stmt, ", string (Int.toString i), string ")"]
+              | Money => raise Fail "SQLite doesn't support 'money' type"
               | String =>
                 if wontLeakStrings then
                     box [string "(uw_Basis_string)sqlite3_column_text(stmt, ", string (Int.toString i), string ")"]
@@ -587,6 +589,7 @@ fun p_inputs loc =
                                                       string ", ",
                                                       arg,
                                                       string ")"]
+                                      | Money => raise Fail "SQLite doesn't support 'money' type"
                                       | String => box [string "sqlite3_bind_text(stmt, ",
                                                        string (Int.toString (i + 1)),
                                                        string ", ",

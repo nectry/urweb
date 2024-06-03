@@ -1,0 +1,5 @@
+database dbname=money
+sql money.sql
+rewrite all Money/*
+
+money

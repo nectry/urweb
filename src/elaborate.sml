@@ -211,6 +211,7 @@
 
  val int = ref cerror
  val float = ref cerror
+ val money = ref cerror
  val string = ref cerror
  val char = ref cerror
  val table = ref cerror
@@ -1460,9 +1461,10 @@
      case p of
          P.Int _ => !int
        | P.Float _ => !float
+       | P.Money _ => !money
        | P.String _ => !string
        | P.Char _ => !char
-                           
+
  datatype constraint =
           Disjoint of Blames.t * D.goal
         | TypeClass of Blames.t * E.env * L'.con * L'.exp option ref * ErrorMsg.span
@@ -4885,6 +4887,7 @@ fun elabFile basis basis_tm topStr topSgn top_tm env changeEnv file =
 
         val () = discoverC int "int"
         val () = discoverC float "float"
+        val () = discoverC money "money"
         val () = discoverC string "string"
         val () = discoverC char "char"
         val () = discoverC table "sql_table"

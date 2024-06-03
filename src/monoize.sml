@@ -704,6 +704,14 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
                                  (L'.TFfi ("Basis", "bool"), loc),
                                  (L'.EBinop (L'.NotInt, "==", (L'.ERel 1, loc), (L'.ERel 0, loc)), loc)), loc)), loc),
              fm)
+          | L.EFfi ("Basis", "eq_money") =>
+            ((L'.EAbs ("x", (L'.TFfi ("Basis", "money"), loc),
+                       (L'.TFun ((L'.TFfi ("Basis", "money"), loc), (L'.TFfi ("Basis", "bool"), loc)), loc),
+                       (L'.EAbs ("y", (L'.TFfi ("Basis", "money"), loc),
+                                 (L'.TFfi ("Basis", "bool"), loc),
+                                 (L'.EFfiApp ("Basis", "eq_money", [((L'.ERel 1, loc), (L'.TFfi ("Basis", "money"), loc)),
+                                                                   ((L'.ERel 0, loc), (L'.TFfi ("Basis", "money"), loc))]), loc)), loc)), loc),
+             fm)
           | L.EFfi ("Basis", "eq_bool") =>
             ((L'.EAbs ("x", (L'.TFfi ("Basis", "bool"), loc),
                        (L'.TFun ((L'.TFfi ("Basis", "bool"), loc), (L'.TFfi ("Basis", "bool"), loc)), loc),
@@ -917,6 +925,20 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
                        floatBin "<",
                        floatBin "<=")
             end
+          | L.EFfi ("Basis", "ord_money") =>
+            let
+                fun boolBin s =
+                    (L'.EAbs ("x", (L'.TFfi ("Basis", "money"), loc),
+                              (L'.TFun ((L'.TFfi ("Basis", "money"), loc), (L'.TFfi ("Basis", "bool"), loc)), loc),
+                              (L'.EAbs ("y", (L'.TFfi ("Basis", "money"), loc),
+                                        (L'.TFfi ("Basis", "bool"), loc),
+                                        (L'.EFfiApp ("Basis", s, [((L'.ERel 1, loc), (L'.TFfi ("Basis", "money"), loc)),
+                                                                  ((L'.ERel 0, loc), (L'.TFfi ("Basis", "money"), loc))]), loc)), loc)), loc)
+            in
+                ordEx ((L'.TFfi ("Basis", "money"), loc),
+                       boolBin "lt_money",
+                       boolBin "le_money")
+            end
           | L.EFfi ("Basis", "ord_bool") =>
             let
                 fun boolBin s =
@@ -996,6 +1018,8 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
             ((L'.EFfi ("Basis", "intToString"), loc), fm)
           | L.EFfi ("Basis", "show_float") =>
             ((L'.EFfi ("Basis", "floatToString"), loc), fm)
+          | L.EFfi ("Basis", "show_money") =>
+            ((L'.EFfi ("Basis", "moneyToString"), loc), fm)
           | L.EFfi ("Basis", "show_string") =>
             let
                 val s = (L'.TFfi ("Basis", "string"), loc)
@@ -1099,6 +1123,15 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
             in
                 ((L'.ERecord [("Read", (L'.EFfi ("Basis", "stringToFloat"), loc), readType' (t, loc)),
                               ("ReadError", (L'.EFfi ("Basis", "stringToFloat_error"), loc), readErrType (t, loc))],
+                  loc),
+                 fm)
+            end
+          | L.EFfi ("Basis", "read_money") =>
+            let
+                val t = (L'.TFfi ("Basis", "money"), loc)
+            in
+                ((L'.ERecord [("Read", (L'.EFfi ("Basis", "stringToMoney"), loc), readType' (t, loc)),
+                              ("ReadError", (L'.EFfi ("Basis", "stringToMoney_error"), loc), readErrType (t, loc))],
                   loc),
                  fm)
             end
@@ -1944,6 +1977,10 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
             ((L'.EAbs ("x", (L'.TFfi ("Basis", "float"), loc), (L'.TFfi ("Basis", "string"), loc),
                        (L'.EFfiApp ("Basis", "sqlifyFloat", [((L'.ERel 0, loc), (L'.TFfi ("Basis", "float"), loc))]), loc)), loc),
              fm)
+          | L.EFfi ("Basis", "sql_money") =>
+            ((L'.EAbs ("x", (L'.TFfi ("Basis", "money"), loc), (L'.TFfi ("Basis", "string"), loc),
+                       (L'.EFfiApp ("Basis", "sqlifyMoney", [((L'.ERel 0, loc), (L'.TFfi ("Basis", "money"), loc))]), loc)), loc),
+             fm)
           | L.EFfi ("Basis", "sql_bool") =>
             ((L'.EAbs ("x", (L'.TFfi ("Basis", "bool"), loc), (L'.TFfi ("Basis", "string"), loc),
                        (L'.EFfiApp ("Basis", "sqlifyBool", [((L'.ERel 0, loc), (L'.TFfi ("Basis", "bool"), loc))]), loc)), loc),
@@ -1997,6 +2034,7 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
                     case #1 t of
                         L'.TFfi ("Basis", "int") => Settings.Int
                       | L'.TFfi ("Basis", "float") => Settings.Float
+                      | L'.TFfi ("Basis", "money") => Settings.Money
                       | L'.TFfi ("Basis", "string") => Settings.String
                       | L'.TFfi ("Basis", "char") => Settings.Char
                       | L'.TFfi ("Basis", "bool") => Settings.Bool
@@ -2566,6 +2604,7 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
 
           | L.EFfi ("Basis", "sql_summable_int") => ((L'.ERecord [], loc), fm)
           | L.EFfi ("Basis", "sql_summable_float") => ((L'.ERecord [], loc), fm)
+          | L.EFfi ("Basis", "sql_summable_money") => ((L'.ERecord [], loc), fm)
           | L.ECApp ((L.EFfi ("Basis", "sql_summable_option"), _), _) =>
             ((L'.EAbs ("_", (L'.TRecord [], loc), (L'.TRecord [], loc),
                        (L'.ERecord [], loc)), loc),
@@ -2589,6 +2628,7 @@ fun monoExp (env, st, fm) (all as (e, loc)) =
 
           | L.EFfi ("Basis", "sql_maxable_int") => ((L'.ERecord [], loc), fm)
           | L.EFfi ("Basis", "sql_maxable_float") => ((L'.ERecord [], loc), fm)
+          | L.EFfi ("Basis", "sql_maxable_money") => ((L'.ERecord [], loc), fm)
           | L.EFfi ("Basis", "sql_maxable_string") => ((L'.ERecord [], loc), fm)
           | L.ECApp ((L.EFfi ("Basis", "sql_maxable_option"), _), _) =>
             ((L'.EAbs ("_", (L'.TRecord [], loc), (L'.TRecord [], loc),
