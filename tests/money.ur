@@ -1,5 +1,15 @@
 table products : { Product : string, Price : money }
 
+fun compare r =
+    case (read r.P1, read r.P2) of
+        (Some (p1 : money), Some p2) =>
+        return <xml><body>
+          Equal? {[p1 = p2]}<br/>
+          Less-than? {[p1 < p2]}<br/>
+          Less-than-or-equal? {[p1 <= p2]}
+        </body></xml>
+      | _ => error <xml>Malformed prices</xml>
+
 fun main () =
     prods <- queryX (SELECT *
                      FROM products
@@ -27,6 +37,14 @@ fun main () =
         Name: <textbox{#Product}/><br/>
         Price: <textbox{#Price}/><br/>
         <submit action={addEx}/>
+      </form>
+
+      <h1>Comparison</h1>
+
+      <form>
+        Price #1: <textbox{#P1}/><br/>
+        Price #2: <textbox{#P2}/><br/>
+        <submit action={compare}/>
       </form>
     </body></xml>
 

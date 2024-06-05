@@ -4915,6 +4915,24 @@ uw_Basis_bool uw_Basis_le_time(uw_context ctx, uw_Basis_time t1, uw_Basis_time t
   return !!(uw_Basis_eq_time(ctx, t1, t2) || uw_Basis_lt_time(ctx, t1, t2));
 }
 
+uw_Basis_bool uw_Basis_eq_money(uw_context ctx, uw_Basis_money m1, uw_Basis_money m2) {
+  if (m1.num_fractional != m2.num_fractional)
+    uw_error(ctx, FATAL, "Trying to compare money values with different fractional-part lengths");
+  return !!(m1.amount == m2.amount);
+}
+
+uw_Basis_bool uw_Basis_lt_money(uw_context ctx, uw_Basis_money m1, uw_Basis_money m2) {
+  if (m1.num_fractional != m2.num_fractional)
+    uw_error(ctx, FATAL, "Trying to compare money values with different fractional-part lengths");
+  return !!(m1.amount < m2.amount);
+}
+
+uw_Basis_bool uw_Basis_le_money(uw_context ctx, uw_Basis_money m1, uw_Basis_money m2) {
+  if (m1.num_fractional != m2.num_fractional)
+    uw_error(ctx, FATAL, "Trying to compare money values with different fractional-part lengths");
+  return !!(m1.amount <= m2.amount);
+}
+
 uw_Basis_time *uw_Basis_readUtc(uw_context ctx, uw_Basis_string s) {
   struct tm stm = {};
   char *end = strchr(s, 0);
