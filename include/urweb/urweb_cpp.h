@@ -154,7 +154,7 @@ uw_unit uw_Basis_urlifySource_w(struct uw_context *, uw_Basis_source);
 uw_Basis_unit uw_Basis_unurlifyUnit(struct uw_context * ctx, char **s);
 uw_Basis_int uw_Basis_unurlifyInt(struct uw_context *, char **);
 uw_Basis_float uw_Basis_unurlifyFloat(struct uw_context *, char **);
-uw_Basis_float uw_Basis_unurlifyMoney(struct uw_context *, char **);
+uw_Basis_money uw_Basis_unurlifyMoney(struct uw_context *, char **);
 uw_Basis_string uw_Basis_unurlifyString(struct uw_context *, char **);
 uw_Basis_char uw_Basis_unurlifyChar(struct uw_context *, char **);
 uw_Basis_string uw_Basis_unurlifyString_fromClient(struct uw_context *, char **);
@@ -207,6 +207,7 @@ char *uw_Basis_jsifyString(struct uw_context *, uw_Basis_string);
 char *uw_Basis_jsifyChar(struct uw_context *, uw_Basis_char);
 char *uw_Basis_jsifyChannel(struct uw_context *, uw_Basis_channel);
 char *uw_Basis_jsifyTime(struct uw_context *, uw_Basis_time);
+char *uw_Basis_jsifyMoney(struct uw_context *, uw_Basis_money);
 
 uw_Basis_string uw_Basis_intToString(struct uw_context *, uw_Basis_int);
 uw_Basis_string uw_Basis_floatToString(struct uw_context *, uw_Basis_float);

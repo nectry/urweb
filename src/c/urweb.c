@@ -1731,6 +1731,17 @@ char *uw_Basis_jsifyChannel(uw_context ctx, uw_Basis_channel chn) {
   }
 }
 
+char *uw_Basis_jsifyMoney(uw_context ctx, uw_Basis_money m) {
+  int len;
+  char *r;
+
+  uw_check_heap(ctx, 2 * INTS_MAX + 26);
+  r = ctx->heap.front;
+  sprintf(r, "{amount:%lld,num_fractional:%d}%n", (long long)m.amount, (int)m.num_fractional, &len);
+  ctx->heap.front += len+1;
+  return r;
+}
+
 uw_Basis_source uw_Basis_new_client_source(uw_context ctx, uw_Basis_string s) {
   int len;
   size_t s_len = strlen(s);
@@ -1856,10 +1867,13 @@ static long long money_frac(uw_Basis_money m, int p10) {
 char *uw_Basis_attrifyMoney(uw_context ctx, uw_Basis_money m) {
   char *result;
   int len, p10 = npow10(m.num_fractional);
+  long long whole, frac;
   uw_check_heap(ctx, INTS_MAX + 1);
   result = ctx->heap.front;
-  sprintf(result, "%lld.%0*lld%n", money_whole(m, p10),
-          m.num_fractional, money_frac(m, p10), &len);
+  whole = money_whole(m, p10);
+  frac = money_frac(m, p10);
+  sprintf(result, "%s%lld.%0*lld%n", (whole == 0 && m.amount < 0 ? "-" : ""), whole,
+          m.num_fractional, frac, &len);
   ctx->heap.front += len+1;
   return result;
 }
@@ -1942,10 +1956,13 @@ uw_unit uw_Basis_attrifyFloat_w(uw_context ctx, uw_Basis_float n) {
 
 uw_unit uw_Basis_attrifyMoney_w(uw_context ctx, uw_Basis_money m) {
   int len, p10 = npow10(m.num_fractional);
+  long long whole, frac;
 
   uw_check(ctx, INTS_MAX + 1);
-  sprintf(ctx->page.front, "%lld.%0*lld%n", money_whole(m, p10),
-          m.num_fractional, money_frac(m, p10), &len);
+  whole = money_whole(m, p10);
+  frac = money_frac(m, p10);
+  sprintf(ctx->page.front, "%s%lld.%0*lld%n", (whole == 0 && m.amount < 0 ? "-" : ""), whole,
+          m.num_fractional, frac, &len);
   ctx->page.front += len;
 
   return uw_unit_v;
@@ -2262,13 +2279,14 @@ static char *decomma_money(uw_context ctx, char *s) {
 
 uw_Basis_money uw_Basis_unurlifyMoney(uw_context ctx, char **s) {
   char *p;
-  int len1, num_fractional;
+  int len1, num_fractional, negative;
   long long whole, fractional;
   uw_Basis_money m;
   
   char *new_s = uw_unurlify_advance(*s);
 
   p = decomma_money(ctx, *s);
+  negative = (*p == '-');
 
   if (sscanf(p, "%lld.%n", &whole, &len1) != 1 || len1 <= 0)
     uw_error(ctx, FATAL, "Malformed money value (whole part2)");
@@ -2277,7 +2295,7 @@ uw_Basis_money uw_Basis_unurlifyMoney(uw_context ctx, char **s) {
 
   *s = new_s;
   m.num_fractional = num_fractional;
-  m.amount = whole * npow10(num_fractional) + (whole < 0 ? -fractional : fractional);
+  m.amount = whole * npow10(num_fractional) + (negative ? -fractional : fractional);
   return m;
 }
 
@@ -3301,11 +3319,12 @@ uw_Basis_float *uw_Basis_stringToFloat(uw_context ctx, uw_Basis_string s) {
 }
 
 uw_Basis_money *uw_Basis_stringToMoney(uw_context ctx, uw_Basis_string s) {
-  int len1, num_fractional;
+  int len1, num_fractional, negative;
   long long whole, fractional;
   uw_Basis_money m, *r;
   
   s = decomma_money(ctx, s);
+  negative = (*s == '-');
 
   if (sscanf(s, "%lld.%n", &whole, &len1) != 1 || len1 <= 0)
     return NULL;
@@ -3313,7 +3332,7 @@ uw_Basis_money *uw_Basis_stringToMoney(uw_context ctx, uw_Basis_string s) {
     return NULL;
 
   m.num_fractional = num_fractional;
-  m.amount = whole * npow10(num_fractional) + (whole < 0 ? -fractional : fractional);
+  m.amount = whole * npow10(num_fractional) + (negative ? -fractional : fractional);
   r = uw_malloc(ctx, sizeof(uw_Basis_money));
   *r = m;
   return r;
@@ -3452,11 +3471,12 @@ uw_Basis_float uw_Basis_stringToFloat_error(uw_context ctx, uw_Basis_string s) {
 }
 
 uw_Basis_money uw_Basis_stringToMoney_error(uw_context ctx, uw_Basis_string s) {
-  int len1, num_fractional;
+  int len1, num_fractional, negative;
   long long whole, fractional;
   uw_Basis_money m;
   
   s = decomma_money(ctx, s);
+  negative = (*s == '-');
 
   if (sscanf(s, "%lld.%n", &whole, &len1) != 1 || len1 <= 0)
     uw_error(ctx, FATAL, "Malformed money value (whole part)");
@@ -3464,7 +3484,7 @@ uw_Basis_money uw_Basis_stringToMoney_error(uw_context ctx, uw_Basis_string s) {
     uw_error(ctx, FATAL, "Malformed money value (fractional part)");
 
   m.num_fractional = num_fractional;
-  m.amount = whole * npow10(num_fractional) + (whole < 0 ? -fractional : fractional);
+  m.amount = whole * npow10(num_fractional) + (negative ? -fractional : fractional);
   return m;
 }
 

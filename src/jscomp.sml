@@ -126,6 +126,7 @@ fun process (file : file) =
               | TFfi ("Basis", "char") => ((EFfiApp ("Basis", "jsifyChar", [(e, t)]), loc), st)
               | TFfi ("Basis", "int") => ((EFfiApp ("Basis", "htmlifyInt", [(e, t)]), loc), st)
               | TFfi ("Basis", "float") => ((EFfiApp ("Basis", "htmlifyFloat", [(e, t)]), loc), st)
+              | TFfi ("Basis", "money") => ((EFfiApp ("Basis", "jsifyMoney", [(e, t)]), loc), st)
               | TFfi ("Basis", "channel") => ((EFfiApp ("Basis", "jsifyChannel", [(e, t)]), loc), st)
               | TFfi ("Basis", "time") => ((EFfiApp ("Basis", "jsifyTime", [(e, t)]), loc), st)
 
