@@ -549,7 +549,7 @@ fun json_list [a] (j : json a) : json (list a) =
         fun toY (i : int) (ls : list a) : string =
             case ls of
                 [] => ""
-              | x :: ls' => indent (i + 1) ^ "- " ^ j.ToYaml (i + 3) x ^ toY i ls'
+              | x :: ls' => "\n" ^ indent (i + 1) ^ "- " ^ j.ToYaml (i + 3) x ^ toY i ls'
 
         fun fromY (b : bool) (i : int) (s : string) : list a * string =
             let
@@ -976,8 +976,17 @@ fun json_variant [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names 
           Success (r, String.suffix s' 1)
         else
           Failure <xml>Junk after JSON value in object</xml>,
-     ToYaml = fn _ _ => error <xml>No YAML variants yet, please</xml>,
-     FromYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>}
+    ToYaml = fn i r =>
+                let
+                    val jnames = @map2 [json] [fn _ => string] [fn x => json x * string]
+                                  (fn [t] (j : json t) (name : string) => (j, name)) fl jss names
+                in
+                    "\n" ^ indent (i+1)
+                    ^ @destrR [ident] [fn x => json x * string]
+                       (fn [p ::_] (v : p) (j : json p, name : string) =>
+                           escape name ^ ": " ^ j.ToYaml (i+2) v) fl r jnames
+                end,
+    FromYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>}
 
 fun json_variant_anon [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) : json (variant ts) = {
     ToJson = fn v => match v
