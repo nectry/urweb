@@ -984,7 +984,7 @@ fun json_variant [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names 
                     "\n" ^ indent (i+1)
                     ^ @destrR [ident] [fn x => json x * string]
                        (fn [p ::_] (v : p) (j : json p, name : string) =>
-                           escape name ^ ": " ^ j.ToYaml (i+2) v) fl r jnames
+                           name ^ ": " ^ j.ToYaml (i+2) v) fl r jnames
                 end,
     FromYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>}
 
