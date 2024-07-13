@@ -917,6 +917,8 @@ val strong : bodyTag boxAttrs
 val em : bodyTag boxAttrs
 val b : bodyTag boxAttrs
 val i : bodyTag boxAttrs
+val s : bodyTag boxAttrs
+val u : bodyTag boxAttrs
 val tt : bodyTag boxAttrs
 val sub : bodyTag boxAttrs
 val sup : bodyTag boxAttrs
@@ -971,6 +973,7 @@ val summary : bodyTag boxAttrs
 val time  : bodyTag boxAttrs
 val wbr : bodyTag boxAttrs
 val bdi : bodyTag boxAttrs
+val blockquote : bodyTag boxAttrs
 
 val a : bodyTag ([Link = transaction page, Href = url, Target = string, Rel = string, Download = string] ++ boxAttrs)
 
