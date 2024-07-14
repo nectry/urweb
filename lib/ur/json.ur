@@ -570,7 +570,7 @@ fun json_list [a] (j : json a) : json (list a) =
                         (v :: ls, s)
                     end
                 else
-                    error <xml>YAML list contains weird delimiter.</xml>
+                    error <xml>YAML list contains weird delimiter "{[String.sub s' 0]}".</xml>
             end
     in
         {ToJson = toJ,
@@ -986,7 +986,38 @@ fun json_variant [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names 
                        (fn [p ::_] (v : p) (j : json p, name : string) =>
                            name ^ ": " ^ j.ToYaml (i+2) v) fl r jnames
                 end,
-    FromYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>}
+    FromYaml = fn b i s =>
+                  if s = "" then
+                      error <xml>No YAML variant tag found [1]</xml>
+                  else
+                      let
+                          val (i', s') = readYamlLine (if b then Some i else None) s
+                      in
+                          if i' < i then
+                              error <xml>No YAML variant tag found [2]</xml>
+                          else
+                              case String.split s' #":" of
+                                  None => error <xml>No YAML variant tag found [3]</xml>
+                                | Some (name, s') =>
+                                  let
+                                      val s' = skipRealSpaces s'
+                                  in
+                                      @foldR2 [json] [fn _ => string]
+                                       [fn ts => ts' :: {Type} -> [ts ~ ts'] => variant (ts ++ ts') * string]
+                                       (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest] (j : json t) (name' : string)
+                                                    (acc : ts' :: {Type} -> [rest ~ ts'] => variant (rest ++ ts') * string) [fwd ::_] [[nm = t] ++ rest ~ fwd] =>
+                                           if name = name' then
+                                               let
+                                                   val (v, s') = j.FromYaml False (i'+1) (skipRealSpaces s')
+                                               in
+                                                   (make [nm] v, s')
+                                               end
+                                           else
+                                               acc [fwd ++ [nm = t]])
+                                       (fn [fwd ::_] [[] ~ fwd] => error <xml>Unknown YAML object variant name {[name]}</xml>)
+                                       fl jss names [[]] !
+                                  end
+                      end}
 
 fun json_variant_anon [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) : json (variant ts) = {
     ToJson = fn v => match v
@@ -1046,7 +1077,7 @@ fun json_dict [a] (j : json a) : json (list (string * a)) = {
           fromJ (skipSpaces (String.suffix s 1)) []
       end,
      ToYaml = fn i ls =>
-                 foldl (fn (k, v) acc => indent i ^ k ^ ": " ^ j.ToYaml (i+1) v ^ acc) "" ls,
+                 foldl (fn (k, v) acc => "\n" ^ indent i ^ k ^ ": " ^ j.ToYaml (i+1) v ^ acc) "" ls,
      FromYaml = fn b i s =>
                    let
                        fun fromY b s acc =
