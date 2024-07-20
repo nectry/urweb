@@ -36,6 +36,18 @@ val rfc3339_in : string -> time
 val rfc3339_in' : string -> result time
 
 val json_record : ts ::: {Type} -> folder ts -> $(map json ts) -> $(map (fn _ => string) ts) -> json $ts
+
+(* Make a json instance for a record where some fields are allowed to be
+optional.  For required fields, simply provide the label, but for optional
+fields, additionally provide the default value.  During serializing, if a field
+contains its default value, it will be omitted, and during parsing, any field
+that is missing will be filled in with its default value. *)
+val json_record_withDefaults
+  : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
+  => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
+  -> folder ots -> $(map json ots) -> $(map (fn t => string * t) ots)
+  -> json $(ts ++ ots)
+
 val json_record_withOptional : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
                                => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
                                -> folder ots -> $(map json ots) -> $(map (fn _ => string) ots)

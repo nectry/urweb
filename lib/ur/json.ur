@@ -665,6 +665,178 @@ fun skipUntilIndentLowEnough target s =
         s'
     end
 
+fun json_record_withDefaults
+    [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
+    (fl : folder ts)
+    (jss : $(map json ts))
+    (names : $(map (fn _ => string) ts))
+    (ofl : folder ots)
+    (ojss : $(map json ots))
+    (onamesAndDefaults : $(map (fn t => string * t) ots))
+      : json $(ts ++ ots) = {
+  ToJson = fn r =>
+    let
+        val withRequired =
+            @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
+            (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
+              escape name ^ ":" ^ j.ToJson v ^
+                (case acc of "" => "" | acc => "," ^ acc))
+            "" fl jss names (r --- _)
+
+        val withOptional =
+            @foldR3 [json] [fn t => string * t] [ident] [fn _ => string]
+            (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) (name, def) v acc =>
+              (* Really, we'd like to check v and def for equality, but I don't
+              want to add an eq constraint, so we do this slight hack of
+              checking whether their json representations are the same, which
+              should work fine. *)
+              let val jv = j.ToJson v in
+                if jv = j.ToJson def
+                then acc
+                else escape name ^ ":" ^ jv ^
+                  (case acc of "" => "" | acc => "," ^ acc)
+              end)
+            withRequired ofl ojss onamesAndDefaults (r --- _)
+    in
+        "{" ^ withOptional ^ "}"
+    end,
+  FromJson = fn s =>
+    let
+      fun fromJ s (r : $(map option (ts ++ ots))) : result ($(map option (ts ++ ots)) * string) =
+        if s = "" then
+          Failure <xml>JSON object doesn't end in brace</xml>
+        else if String.sub s 0 = #"}" then
+          Success (r, String.suffix s 1)
+        else
+          (name, s') <- unescape s;
+          s' <- return (skipSpaces s');
+          s' <- (if s' = "" || String.sub s' 0 <> #":"
+              then Failure <xml>No colon after JSON object field name</xml>
+              else Success (skipSpaces (String.suffix s' 1)));
+          (r, s') <- @foldR2 [json] [fn _ => string] [fn ts => $(map option ts) -> result ($(map option ts) * string)]
+              (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name' acc r =>
+                  if name = name' then
+                    (v, s') <- j.FromJson s';
+                    return (r -- nm ++ {nm = Some v}, s')
+                  else
+                    (r', s') <- acc (r -- nm);
+                    return (r' ++ {nm = r.nm}, s'))
+              (fn r => Success (r, skipOne s'))
+              (@Folder.concat ! fl ofl)
+              (jss ++ ojss) (names ++ @Top.mp [fn t => string * t] [fn _ => string] (fn [t] (n,_) => n) ofl onamesAndDefaults) r;
+          s' <- return (skipSpaces s');
+          s' <- return
+              (if s' <> "" && String.sub s' 0 = #","
+                  then skipSpaces (String.suffix s' 1)
+                  else s');
+          fromJ s' r
+    in
+      if s = "" || String.sub s 0 <> #"{" then
+        Failure <xml>JSON record doesn't begin with brace: {[firstTen s]}</xml>
+      else
+        (r, s') <- fromJ (skipSpaces (String.suffix s 1))
+                      (@map0 [option] (fn [t ::_] => None) (@Folder.concat ! fl ofl));
+        mandatories <- (@monadMapR2 _ [option] [fn _ => string] [ident]
+          (fn [nm ::_] [t ::_] (v : option t) name =>
+              case v of
+                  None => Failure <xml>Missing JSON object field {[name]}</xml>
+                | Some v => Success v) fl (r --- _) names);
+        defaults <- (@monadMapR2 _ [option] [fn t => string * t] [ident]
+          (fn [nm ::_] [t ::_] (v : option t) (name, def) =>
+              case v of
+                  None => Success def
+                | Some v => Success v) ofl (r --- _) onamesAndDefaults);
+        return (mandatories ++ defaults, s')
+      end,
+    ToYaml = fn i r =>
+      let
+        val withRequired =
+          @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
+            (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
+              "\n" ^ indent (i+1) ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+            "" fl jss names (r --- _)
+
+        val withOptional =
+          @foldR3 [json] [fn t => string * t] [ident] [fn _ => string]
+            (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) (name, def) v acc =>
+              (* Really, we'd like to check v and def for equality, but I don't
+              want to add an eq constraint, so we do this slight hack of
+              checking whether their yaml representations are the same, which
+              should work fine. *)
+              let val yv = j.ToYaml (i+2) v in
+                if yv = j.ToYaml (i+2) def
+                then acc
+                else "\n" ^ indent (i+1) ^ name ^ ": " ^ yv ^ acc
+              end)
+            withRequired ofl ojss onamesAndDefaults (r --- _)
+      in
+          withOptional
+      end,
+    FromYaml = fn b i s =>
+      let
+          fun fromY b s (r : $(map option (ts ++ ots))) : $(map option (ts ++ ots)) * string =
+              if s = "" then
+                  (r, s)
+              else
+                  let
+                      val (i', s') = readYamlLine (if b then Some i else None) s
+                      val i' = if b then max i i' else i'
+                  in
+                      if i' < i then
+                          (r, s)
+                      else
+                          case String.split s' #":" of
+                              None =>
+                              if String.all Char.isSpace s' then
+                                  (r, "")
+                              else
+                                  error <xml>Bad label in YAML record: {[firstTen s']}</xml>
+                            | Some (name, s') =>
+                              let
+                                  val s' = skipRealSpaces s'
+                                  val onames = @Top.mp [fn t => string * t] [fn _ => string] (fn [t] (n,_) => n) ofl onamesAndDefaults
+
+                                  val (r, s') = @foldR2 [json] [fn _ => string] [fn ts => $(map option ts) -> $(map option ts) * string]
+                                                 (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name' acc r =>
+                                                     if name = name' then
+                                                         let
+                                                             val (v, s') = j.FromYaml False (i'+1) s'
+                                                         in
+                                                             (r -- nm ++ {nm = Some v}, s')
+                                                         end
+                                                     else
+                                                         let
+                                                             val (r', s') = acc (r -- nm)
+                                                         in
+                                                             (r' ++ {nm = r.nm}, s')
+                                                         end)
+                                                 (fn r => (r, skipUntilIndentLowEnough i' s'))
+                                                 (@Folder.concat ! fl ofl) (jss ++ ojss) (names ++ onames) r
+                              in
+                                  fromY False s' r
+                              end
+                  end
+
+          val r = @map0 [option] (fn [t ::_] => None) (@Folder.concat ! fl ofl)
+          val (r, s') =
+              if String.isPrefix {Full = s, Prefix = "{}"} then
+                  (r, String.suffix s 2)
+              else
+                  fromY b s r
+          val mandatories = @map2 [option] [fn _ => string] [ident]
+                             (fn [t] (v : option t) name =>
+                                 case v of
+                                     None => error <xml>Missing YAML object field {[name]}</xml>
+                                   | Some v => v) fl (r --- _) names
+          val defaults = @map2 [option] [fn t => string * t] [ident]
+                          (fn [t] (v : option t) (name, def) =>
+                              case v of
+                                  None => def
+                                | Some v => v) ofl (r --- _) onamesAndDefaults
+      in
+          (mandatories ++ defaults, s')
+      end}
+
 fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
                              (fl : folder ts) (jss : $(map json ts)) (names : $(map (fn _ => string) ts))
                              (ofl : folder ots) (ojss : $(map json ots)) (onames : $(map (fn _ => string) ots)): json $(ts ++ map option ots) =
