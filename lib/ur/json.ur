@@ -347,7 +347,13 @@ fun rfc3339_out s =
 
 fun rfc3339_in' (s : string) : result time =
     case String.split s #"T" of
-        None => Failure <xml>Invalid RFC 3339 string "{[s]}"</xml>
+        None =>
+          (* HACK: Assume this is a date with no time. *)
+          (* TODO: decide on a robust convention for assigning RFC 3339
+          timestamps given only a date. For now, set it to midnight on that date
+          in UTC. See issue #152. *)
+          rfc3339_in' (s ^ "T00:00:00Z")
+          (* Failure <xml>Invalid RFC 3339 string "{[s]}"</xml> *)
       | Some (date, time) =>
         case String.msplit {Haystack = time, Needle = "Z+-"} of
             None => Failure <xml>Invalid RFC 3339 string "{[s]}"</xml>
