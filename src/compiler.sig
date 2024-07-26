@@ -109,6 +109,7 @@ signature COMPILER = sig
     val rpcify : (Core.file, Core.file) phase
     val tag : (Core.file, Core.file) phase
     val reduce : (Core.file, Core.file) phase
+    val poly_reduce : (Core.file, Core.file) phase
     val unpoly : (Core.file, Core.file) phase
     val especialize : (Core.file, Core.file) phase
     val specialize : (Core.file, Core.file) phase
@@ -151,6 +152,9 @@ signature COMPILER = sig
     val toRpcify : (string, Core.file) transform
     val toCore_untangle2 : (string, Core.file) transform
     val toShake2 : (string, Core.file) transform
+    val toPoly_reduce : (string, Core.file) transform
+    val toShake2' : (string, Core.file) transform
+    val toUnpoly0 : (string, Core.file) transform
     val toEspecialize1 : (string, Core.file) transform
     val toCore_untangle3 : (string, Core.file) transform
     val toShake3 : (string, Core.file) transform

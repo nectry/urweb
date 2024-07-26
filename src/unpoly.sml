@@ -38,6 +38,8 @@ structure IS = IntBinarySet
 structure IM = IntBinaryMap
 
 
+datatype mode = RecordsOnly | Anything
+
 (** The actual specialization *)
 
 val liftConInCon = E.liftConInCon
@@ -55,6 +57,12 @@ val isOpen = U.Con.existsB {kind = fn _ => false,
                                       case b of
                                           U.Con.RelC _ => n + 1
                                         | _ => n} 0
+
+val hasRecord = U.Con.exists {kind = fn _ => false,
+                              con = fn c =>
+                                       case c of
+                                           TRecord _ => true
+                                         | _ => false}
 
 fun unpolyNamed (xn, rep) =
     U.Exp.map {kind = fn k => k,
@@ -217,7 +225,7 @@ fun exp (e, st : state) =
 
 and polyExp (x, st) = U.Exp.foldMap {kind = kind, con = con, exp = exp} st x
 
-fun decl (d, st : state) =
+fun decl mode (d, st : state) =
     let
         fun unravel (e, cargs) =
             case e of
@@ -232,9 +240,14 @@ fun decl (d, st : state) =
 
                 val ns = IS.singleton n
             in
-                (d, {funcs = IM.insert (#funcs st, n, {kinds = cargs,
-                                                       defs = [vi],
-                                                       replacements = M.empty}),
+                (d, {funcs = if (case mode of
+                                     RecordsOnly => hasRecord t
+                                  | _ => true) then
+                                 IM.insert (#funcs st, n, {kinds = cargs,
+                                                           defs = [vi],
+                                                           replacements = M.empty})
+                             else
+                                 #funcs st,
                      decls = #decls st,
                      nextName = #nextName st})
             end
@@ -249,7 +262,7 @@ fun decl (d, st : state) =
                         andalso unravel (e, cargs)
                       | (_, []) => true
                       | _ => false
-                             
+
                 fun deAbs (e, cargs) =
                     case (e, cargs) of
                         ((ECAbs (_, _, e), _), _ :: cargs) => deAbs (e, cargs)
@@ -311,13 +324,13 @@ fun decl (d, st : state) =
           | _ => (d, st)
     end
 
-val polyDecl = U.Decl.foldMap {kind = kind, con = con, exp = exp, decl = decl}
+fun polyDecl mode = U.Decl.foldMap {kind = kind, con = con, exp = exp, decl = decl mode}
 
-fun unpoly file =
+fun unpoly mode file =
     let
         fun doDecl (d : decl, st : state) =
             let
-                val (d, st) = polyDecl st d
+                val (d, st) = polyDecl mode st d
             in
                 (rev (d :: #decls st),
                  {funcs = #funcs st,

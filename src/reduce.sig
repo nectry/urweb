@@ -29,6 +29,11 @@
 
 signature REDUCE = sig
 
-    val reduce : Core.file -> Core.file
-    
+    datatype mode = PolymorphicOnly | Anything
+    (* Which kinds of identifiers are we willing to inline?
+     * Focusing on polymorphic only is good set-up for enabling other
+     * optimizations like Unpoly, Specialize, and Especialize. *)
+
+    val reduce : mode -> Core.file -> Core.file
+
 end

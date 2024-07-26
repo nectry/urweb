@@ -824,7 +824,9 @@ fun kind namedC env k = #kind (kindConAndExp (namedC, IM.empty)) env k
 fun con namedC env c = #con (kindConAndExp (namedC, IM.empty)) env c
 fun exp (namedC, namedE) env e = #exp (kindConAndExp (namedC, namedE)) env e
 
-fun reduce file =
+datatype mode = PolymorphicOnly | Anything
+
+fun reduce mode file =
     let
         val uses = CoreUtil.File.fold {kind = fn (_, m) => m,
                                        con = fn (_, m) => m,
@@ -846,47 +848,51 @@ fun reduce file =
                                       exp = fn (_, n) => n + 1} 0
 
         fun mayInline (polyC, n, t, e, s) =
-            let
-                fun isPolicy t =
-                    case #1 t of
-                        CFfi ("Basis", "sql_policy") => true
-                      | TFun (_, t) => isPolicy t
-                      | _ => false
-            in
-                not (Settings.checkNeverInline s) andalso
-                case IM.find (uses, n) of
-                    NONE => false
-                  | SOME count => count <= 1
-                                  orelse (case #1 e of
-                                              ERecord _ => true
-                                            | _ => false)
-                                  orelse isPolicy t
-                                  orelse isPoly polyC t
-                                  orelse size e <= Settings.getCoreInline ()
-            end
+            case mode of
+                PolymorphicOnly => isPoly polyC t
+              | Anything =>
+                let
+                    fun isPolicy t =
+                        case #1 t of
+                            CFfi ("Basis", "sql_policy") => true
+                          | TFun (_, t) => isPolicy t
+                          | _ => false
+                in
+                    not (Settings.checkNeverInline s) andalso
+                    case IM.find (uses, n) of
+                        NONE => false
+                      | SOME count => count <= 1
+                                      orelse (case #1 e of
+                                                  ERecord _ => true
+                                                | _ => false)
+                                      orelse isPolicy t
+                                      orelse isPoly polyC t
+                                      orelse size e <= Settings.getCoreInline ()
+                end
 
-        fun doDecl (d as (_, loc), st as (polyC, namedC, namedE)) =
+        fun doDecl (d as (_, loc), st as (polyC, namedC, namedE, count)) =
             case #1 d of
                 DCon (x, n, k, c) =>
                 let
                     val k = kind namedC [] k
                     val c = con namedC [] c
                 in
-                    ((DCon (x, n, k, c), loc),
+                    ([(DCon (x, n, k, c), loc)],
                      (if isPoly polyC c then
                           IS.add (polyC, n)
                       else
                           polyC,
                       IM.insert (namedC, n, c),
-                      namedE))
+                      namedE,
+                      count))
                 end
               | DDatatype dts =>
-                ((DDatatype (map (fn (x, n, ps, cs) =>
-                                     let
-                                         val env = map (fn _ => UnknownC) ps
-                                     in
-                                         (x, n, ps, map (fn (x, n, co) => (x, n, Option.map (con namedC env) co)) cs)
-                                     end) dts), loc),
+                ([(DDatatype (map (fn (x, n, ps, cs) =>
+                                      let
+                                          val env = map (fn _ => UnknownC) ps
+                                      in
+                                          (x, n, ps, map (fn (x, n, co) => (x, n, Option.map (con namedC env) co)) cs)
+                                      end) dts), loc)],
                  (if List.exists (fn (_, _, _, cs) => List.exists (fn (_, _, co) => case co of
                                                                                         NONE => false
                                                                                       | SOME c => isPoly polyC c) cs)
@@ -895,58 +901,75 @@ fun reduce file =
                   else
                       polyC,
                   namedC,
-                  namedE))
+                  namedE,
+                  count))
               | DVal (x, n, t, e, s) =>
                 let
                     val t = con namedC [] t
                     val e = exp (namedC, namedE) [] e
+
+                    val (ds, count) =
+                        case e of
+                            (ERecord xets, loc') =>
+                            (ListUtil.mapi (fn (i, (y, e, t')) =>
+                                               (DVal (x ^ "_" ^ (case #1 y of
+                                                                     CName s => s
+                                                                   | _ => Int.toString i),
+                                                      count + i,
+                                                      t',
+                                                      e,
+                                                      ""), loc')) xets
+                             @ [(DVal (x, n, t,
+                                       (ERecord (ListUtil.mapi (fn (i, (y, e, t')) =>
+                                                                   (y,
+                                                                    (ENamed (count + i), loc'),
+                                                                    t')) xets), loc'),
+                                       s), loc)],
+                             count + length xets)
+                         | _ => ([(DVal (x, n, t, e, s), loc)], count)
+
+                    val namedE =
+                        List.foldl (fn ((DVal (x, n, t, e, s), _), namedE) =>
+                                       if mayInline (polyC, n, t, e, s) then
+                                           IM.insert (namedE, n, e)
+                                       else
+                                           namedE
+                                   | _ => raise Fail "Impossible output from DVal") namedE ds
                 in
-                    ((DVal (x, n, t, e, s), loc),
-                     (polyC,
-                      namedC,
-                      if mayInline (polyC, n, t, e, s) then
-                          IM.insert (namedE, n, e)
-                      else
-                          namedE))
+                    (ds, (polyC, namedC, namedE, count))
                 end
               | DValRec vis =>
-                ((DValRec (map (fn (x, n, t, e, s) => (x, n, con namedC [] t,
-                                                       exp (namedC, namedE) [] e, s)) vis), loc),
+                ([(DValRec (map (fn (x, n, t, e, s) => (x, n, con namedC [] t,
+                                                        exp (namedC, namedE) [] e, s)) vis), loc)],
                  st)
-              | DExport _ => (d, st)
-              | DTable (s, n, c, s', pe, pc, ce, cc) => ((DTable (s, n, con namedC [] c, s',
-                                                                  exp (namedC, namedE) [] pe,
-                                                                  con namedC [] pc,
-                                                                  exp (namedC, namedE) [] ce,
-                                                                  con namedC [] cc), loc), st)
-              | DSequence _ => (d, st)
-              | DView (s, n, s', e, c) => ((DView (s, n, s', exp (namedC, namedE) [] e, con namedC [] c), loc), st)
-              | DIndex (e1, e2) => ((DIndex (exp (namedC, namedE) [] e1, exp (namedC, namedE) [] e2), loc), st)
-              | DDatabase _ => (d, st)
-              | DCookie (s, n, c, s') => ((DCookie (s, n, con namedC [] c, s'), loc), st)
-              | DStyle (s, n, s') => ((DStyle (s, n, s'), loc), st)
+              | DExport _ => ([d], st)
+              | DTable (s, n, c, s', pe, pc, ce, cc) => ([(DTable (s, n, con namedC [] c, s',
+                                                                   exp (namedC, namedE) [] pe,
+                                                                   con namedC [] pc,
+                                                                   exp (namedC, namedE) [] ce,
+                                                                   con namedC [] cc), loc)], st)
+              | DSequence _ => ([d], st)
+              | DView (s, n, s', e, c) => ([(DView (s, n, s', exp (namedC, namedE) [] e, con namedC [] c), loc)], st)
+              | DIndex (e1, e2) => ([(DIndex (exp (namedC, namedE) [] e1, exp (namedC, namedE) [] e2), loc)], st)
+              | DDatabase _ => ([d], st)
+              | DCookie (s, n, c, s') => ([(DCookie (s, n, con namedC [] c, s'), loc)], st)
+              | DStyle (s, n, s') => ([(DStyle (s, n, s'), loc)], st)
               | DTask (e1, e2) =>
                 let
                     val e1 = exp (namedC, namedE) [] e1
                     val e2 = exp (namedC, namedE) [] e2
                 in
-                    ((DTask (e1, e2), loc),
-                     (polyC,
-                      namedC,
-                      namedE))
+                    ([(DTask (e1, e2), loc)], st)
                 end
               | DPolicy e1 =>
                 let
                     val e1 = exp (namedC, namedE) [] e1
                 in
-                    ((DPolicy e1, loc),
-                     (polyC,
-                      namedC,
-                      namedE))
+                    ([(DPolicy e1, loc)], st)
                 end
-              | DOnError _ => (d, st)
+              | DOnError _ => ([d], st)
 
-        val (file, _) = ListUtil.foldlMap doDecl (IS.empty, IM.empty, IM.empty) file
+        val (file, _) = ListUtil.foldlMapConcat doDecl (IS.empty, IM.empty, IM.empty, CoreUtil.File.maxName file + 1) file
     in
         file
     end

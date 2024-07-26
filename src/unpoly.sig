@@ -29,6 +29,9 @@
 
 signature UNPOLY = sig
 
-    val unpoly : Core.file -> Core.file
-    
+    datatype mode = RecordsOnly | Anything
+    (* Do we only specialize when a record type is involved?  This helps expose some additional optimizations we want to run early. *)
+
+    val unpoly : mode -> Core.file -> Core.file
+
 end
