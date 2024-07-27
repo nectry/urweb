@@ -89,6 +89,14 @@ fun skipRealSpaces (s : string) : string =
     else
         s
 
+fun skipNewlines (s : string) : string =
+    if s = "" then
+        ""
+    else if String.sub s 0 = #"\n" || String.sub s 0 = #"\r" then
+        skipNewlines (String.suffix s 1)
+    else
+        s
+
 fun toJson [a] (j : json a) : a -> string = j.ToJson
 fun fromJsonR' [a] (j : json a) : string -> result (a * string) = j.FromJson
 
@@ -551,6 +559,12 @@ fun json_list [a] (j : json a) : json (list a) =
                 [] => ""
               | x :: ls' => "\n" ^ indent (i + 1) ^ "- " ^ j.ToYaml (i + 3) x ^ toY i ls'
 
+        fun shortenString s =
+            if strlenGe s 30 then
+                String.substring s {Start = 0, Len = 30}
+            else
+                s
+
         fun fromY (b : bool) (i : int) (s : string) : list a * string =
             let
                 val (i', s') = readYamlLine (if b then Some i else None) s
@@ -570,16 +584,24 @@ fun json_list [a] (j : json a) : json (list a) =
                         (v :: ls, s)
                     end
                 else
-                    error <xml>YAML list contains weird delimiter "{[String.sub s' 0]}".</xml>
+                    error <xml>YAML list contains weird delimiter at "{[shortenString s']}".</xml>
             end
     in
         {ToJson = toJ,
          FromJson = fromJ,
-         ToYaml = toY,
-         FromYaml = fn b i s => if String.isPrefix {Full = s, Prefix = "[]"} then
-                                    ([], String.suffix s 2)
-                                else
-                                    fromY b i s}
+         ToYaml = fn i ls =>
+                     case ls of
+                         [] => "[]"
+                       | _ => toY i ls,
+         FromYaml = fn b i s =>
+                       let
+                           val s = skipRealSpaces s
+                       in
+                           if String.isPrefix {Full = s, Prefix = "[]"} then
+                               ([], skipNewlines (String.suffix s 2))
+                           else
+                               fromY b (i+1) s
+                       end}
     end
 
 fun skipOne (s : string) : string =
@@ -753,7 +775,7 @@ fun json_record_withDefaults
         val withRequired =
           @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
             (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-              "\n" ^ indent (i+1) ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
             "" fl jss names (r --- _)
 
         val withOptional =
@@ -766,7 +788,7 @@ fun json_record_withDefaults
               let val yv = j.ToYaml (i+2) v in
                 if yv = j.ToYaml (i+2) def
                 then acc
-                else "\n" ^ indent (i+1) ^ name ^ ": " ^ yv ^ acc
+                else "\n" ^ indent i ^ name ^ ": " ^ yv ^ acc
               end)
             withRequired ofl ojss onamesAndDefaults (r --- _)
       in
@@ -921,7 +943,7 @@ fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
                      val withRequired =
                          @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
                           (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-                              "\n" ^ indent (i+1) ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+                              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
                           "" fl jss names (r --- _)
 
                      val withOptional =
@@ -930,7 +952,7 @@ fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
                               case v of
                                   None => acc
                                 | Some v =>
-                                  "\n" ^ indent (i+1) ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+                                  "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
                           withRequired ofl ojss onames (r --- _)
                  in
                      withOptional
@@ -1046,7 +1068,7 @@ fun json_record [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names :
      ToYaml = fn i r =>
                  @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
                   (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-                      "\n" ^ indent (i+1) ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+                      "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
                   "" fl jss names (r --- _),
      FromYaml = fn b i s =>
                    let
@@ -1153,7 +1175,7 @@ fun json_variant [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names 
                     val jnames = @map2 [json] [fn _ => string] [fn x => json x * string]
                                   (fn [t] (j : json t) (name : string) => (j, name)) fl jss names
                 in
-                    "\n" ^ indent (i+1)
+                    "\n" ^ indent i
                     ^ @destrR [ident] [fn x => json x * string]
                        (fn [p ::_] (v : p) (j : json p, name : string) =>
                            name ^ ": " ^ j.ToYaml (i+2) v) fl r jnames
