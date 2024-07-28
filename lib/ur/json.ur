@@ -1,14 +1,16 @@
 (* TODO: Change Yaml to use result too *)
 con json a = {ToJson : a -> string,
               FromJson : string -> result (a * string),
-              ToYaml : int (* starting indent level *) -> a -> string,
+              ToYaml : bool (* comes immediately after list bullet? *)
+                       -> int (* starting indent level *)
+                       -> a -> string,
               FromYaml : bool (* comes immediately after list bullet? *)
                       -> int (* starting indent level *)
                       -> string -> a * string}
 
 fun mkJson [a] (x : {ToJson : a -> string,
                      FromJson : string -> result (a * string)}) =
-    x ++ {ToYaml = fn _ _ => error <xml>No YAML support</xml>,
+    x ++ {ToYaml = fn _ _ _ => error <xml>No YAML support</xml>,
           FromYaml = fn _ _ _ => error <xml>No YAML support</xml>}
 
 (* These urweb-repo files can't seem to see each other, which means we need to copy some code into them so that things work.  This seems wrong, but I don't know what the right fix is. *)
@@ -110,7 +112,7 @@ fun fromJson' [a] (j : json a) : string -> a * string = j.FromJson >>> resultErr
 
 fun fromJson [a] (j : json a) : string -> a = @@fromJsonR [a] j >>> resultErrorGet
 
-fun toYaml [a] (j : json a) : a -> string = j.ToYaml 0
+fun toYaml [a] (j : json a) : a -> string = j.ToYaml False 0
 
 (* fun fromYamlO [a] (j : json a) (s : string) : option a =
     (v, s') <- j.FromYaml False 0 (skipSpaces s);
@@ -338,7 +340,7 @@ fun stringIn i s =
 
 val json_string = {ToJson = escape,
                    FromJson = unescape,
-                   ToYaml = fn _ => escape,
+                   ToYaml = fn _ _ => escape,
                    FromYaml = fn _ => stringIn}
 
 fun rfc3339_out s =
@@ -391,7 +393,7 @@ fun timeOut (s : string) : result (time * string) =
 
 val json_time = {ToJson = fn tm => escape (rfc3339_out tm),
                  FromJson = timeOut,
-                 ToYaml = fn _ tm => escape (rfc3339_out tm),
+                 ToYaml = fn _ _ tm => escape (rfc3339_out tm),
                  FromYaml = fn _ _ => timeOut >>> resultErrorGet}
 
 fun numIn [a] (_ : read a) (s : string) : result (a * string) =
@@ -445,7 +447,7 @@ fun numIn [a] (_ : read a) (s : string) : result (a * string) =
 fun json_num [a] (_ : show a) (_ : read a) : json a =
     {ToJson = show,
     FromJson = numIn,
-    ToYaml = fn _ => show,
+    ToYaml = fn _ _ => show,
     FromYaml = fn _ _ => numIn >>> resultErrorGet}
 
 val json_int = json_num
@@ -464,7 +466,7 @@ val json_bool = {
             Success (False, String.suffix s 7)
         else
             Failure <xml>JSON: bad boolean string: {[s]}</xml>,
-    ToYaml = fn _ b => if b then "True" else "False",
+    ToYaml = fn _ _ b => if b then "True" else "False",
     FromYaml = fn _ _ s =>
         case String.msplit {Haystack = s, Needle = " \r\n"} of
             None => error <xml>No space after Boolean in YAML</xml>
@@ -491,9 +493,9 @@ fun json_option [a] (j : json a) : json (option a) = {
       else
         (v, s') <- j.FromJson s;
         return (Some v, s'),
-    ToYaml = fn i v => case v of
+    ToYaml = fn b i v => case v of
         None => "null"
-      | Some v => j.ToYaml i v,
+      | Some v => j.ToYaml b i v,
     FromYaml = fn b i s =>
       if String.isPrefix {Full = s, Prefix = "null"} then
           (None, String.suffix s 4)
@@ -515,6 +517,19 @@ fun truncAtNewline s =
     case String.split s #"\n" of
         None => s
       | Some (s', _) => s'
+
+(* Remove leading spaces *)
+fun triml s =
+    if s <> "" && Char.isSpace (String.sub s 0) then
+        triml (String.suffix s 1)
+    else
+        s
+
+fun removeNewlineIfAfterBullet (afterBullet : bool) (s : string) =
+    if afterBullet && s <> "" && String.sub s 0 = #"\n" then
+        triml (String.suffix s 1)
+    else
+        s
 
 fun json_list [a] (j : json a) : json (list a) =
     let
@@ -557,7 +572,7 @@ fun json_list [a] (j : json a) : json (list a) =
         fun toY (i : int) (ls : list a) : string =
             case ls of
                 [] => ""
-              | x :: ls' => "\n" ^ indent (i + 1) ^ "- " ^ j.ToYaml (i + 3) x ^ toY i ls'
+              | x :: ls' => "\n" ^ indent (i + 1) ^ "- " ^ j.ToYaml True (i + 3) x ^ toY i ls'
 
         fun shortenString s =
             if strlenGe s 30 then
@@ -589,10 +604,10 @@ fun json_list [a] (j : json a) : json (list a) =
     in
         {ToJson = toJ,
          FromJson = fromJ,
-         ToYaml = fn i ls =>
+         ToYaml = fn b i ls =>
                      case ls of
                          [] => "[]"
-                       | _ => toY i ls,
+                       | _ => removeNewlineIfAfterBullet b (toY i ls),
          FromYaml = fn b i s =>
                        let
                            val s = skipRealSpaces s
@@ -770,12 +785,12 @@ fun json_record_withDefaults
                 | Some v => Success v) ofl (r --- _) onamesAndDefaults);
         return (mandatories ++ defaults, s')
       end,
-    ToYaml = fn i r =>
+    ToYaml = fn b i r =>
       let
         val withRequired =
           @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
             (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
             "" fl jss names (r --- _)
 
         val withOptional =
@@ -785,14 +800,14 @@ fun json_record_withDefaults
               want to add an eq constraint, so we do this slight hack of
               checking whether their yaml representations are the same, which
               should work fine. *)
-              let val yv = j.ToYaml (i+2) v in
-                if yv = j.ToYaml (i+2) def
+              let val yv = j.ToYaml False (i+2) v in
+                if yv = j.ToYaml False (i+2) def
                 then acc
                 else "\n" ^ indent i ^ name ^ ": " ^ yv ^ acc
               end)
             withRequired ofl ojss onamesAndDefaults (r --- _)
       in
-          withOptional
+          removeNewlineIfAfterBullet b withOptional
       end,
     FromYaml = fn b i s =>
       let
@@ -938,12 +953,12 @@ fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
                       | Some v => Success v) fl (r --- _) names);
           return (mandatories ++ (r --- _), s')
         end,
-     ToYaml = fn i r =>
+     ToYaml = fn b i r =>
                  let
                      val withRequired =
                          @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
                           (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-                              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+                              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
                           "" fl jss names (r --- _)
 
                      val withOptional =
@@ -952,10 +967,10 @@ fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
                               case v of
                                   None => acc
                                 | Some v =>
-                                  "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
+                                  "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
                           withRequired ofl ojss onames (r --- _)
                  in
-                     withOptional
+                     removeNewlineIfAfterBullet b withOptional
                  end,
      FromYaml = fn b i s =>
                    let
@@ -1065,11 +1080,12 @@ fun json_record [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names :
                       | Some v => Success v) fl r names);
           return (r, s')
         end,
-     ToYaml = fn i r =>
-                 @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
-                  (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-                      "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml (i+2) v ^ acc)
-                  "" fl jss names (r --- _),
+     ToYaml = fn b i r =>
+                 removeNewlineIfAfterBullet b
+                   (@foldR3 [json] [fn _ => string] [ident] [fn _ => string]
+                     (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
+                         "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
+                     "" fl jss names (r --- _)),
      FromYaml = fn b i s =>
                    let
                        fun fromY b s (r : $(map option ts)) : $(map option ts) * string =
@@ -1170,15 +1186,15 @@ fun json_variant [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) (names 
           Success (r, String.suffix s' 1)
         else
           Failure <xml>Junk after JSON value in object</xml>,
-    ToYaml = fn i r =>
+    ToYaml = fn b i r =>
                 let
                     val jnames = @map2 [json] [fn _ => string] [fn x => json x * string]
                                   (fn [t] (j : json t) (name : string) => (j, name)) fl jss names
                 in
-                    "\n" ^ indent i
+                    (if b then "" else "\n" ^ indent i)
                     ^ @destrR [ident] [fn x => json x * string]
                        (fn [p ::_] (v : p) (j : json p, name : string) =>
-                           name ^ ": " ^ j.ToYaml (i+2) v) fl r jnames
+                           name ^ ": " ^ j.ToYaml False (i+2) v) fl r jnames
                 end,
     FromYaml = fn b i s =>
                   if s = "" then
@@ -1229,7 +1245,7 @@ fun json_variant_anon [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) : 
               | Failure _ => Failure x))
         (fn [fwd ::_] [[] ~ fwd] => Failure <xml>Unknown anonymous JSON variant</xml>)
         fl jss) [[]] !,
-     ToYaml = fn _ _ => error <xml>No YAML variants yet, please</xml>,
+     ToYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>,
      FromYaml = fn _ _ _ => error <xml>No YAML variants yet, please</xml>}
 
 val json_unit : json unit = json_record {} {}
@@ -1270,8 +1286,9 @@ fun json_dict [a] (j : json a) : json (list (string * a)) = {
         else
           fromJ (skipSpaces (String.suffix s 1)) []
       end,
-     ToYaml = fn i ls =>
-                 foldl (fn (k, v) acc => "\n" ^ indent i ^ k ^ ": " ^ j.ToYaml (i+1) v ^ acc) "" ls,
+     ToYaml = fn b i ls =>
+                 removeNewlineIfAfterBullet b
+                   (foldl (fn (k, v) acc => "\n" ^ indent i ^ k ^ ": " ^ j.ToYaml False (i+1) v ^ acc) "" ls),
      FromYaml = fn b i s =>
                    let
                        fun fromY b s acc =
@@ -1308,7 +1325,7 @@ fun json_derived [base] [derived]
       (x, s') <- j.FromJson s;
       x <- f1 x;
       return (x, s'),
-    ToYaml = fn i x => j.ToYaml i (f2 x),
+    ToYaml = fn b i x => j.ToYaml b i (f2 x),
     FromYaml = fn b i s =>
                    let
                        val (x, s') = j.FromYaml b i s
@@ -1331,21 +1348,21 @@ functor Recursive (M : sig
 
     fun rTo (Rec x) = (json_t {ToJson = rTo,
                                FromJson = fn _ => error <xml>Tried to FromJson in ToJson!</xml>,
-                               ToYaml = fn _ _ => error <xml>Tried to ToYaml in ToJson!</xml>,
+                               ToYaml = fn _ _ _ => error <xml>Tried to ToYaml in ToJson!</xml>,
                                FromYaml = fn _ _ _ => error <xml>Tried to FromYaml in ToJson!</xml>}).ToJson x
 
     fun rFrom s =
       (x, s') <- (json_t {
         ToJson = fn _ => error <xml>Tried to ToJson in FromJson!</xml>,
         FromJson = rFrom,
-        ToYaml = fn _ _ => error <xml>Tried to ToYaml in FromJson!</xml>,
+        ToYaml = fn _ _ _ => error <xml>Tried to ToYaml in FromJson!</xml>,
         FromYaml = fn _ _ _ => error <xml>Tried to FromYaml in FromJson!</xml>}).FromJson s;
       return (Rec x, s')
 
-    fun yTo i (Rec x) = (json_t {ToYaml = yTo,
-                                 FromYaml = fn _ _ _ => error <xml>Tried to FromYaml in ToYaml!</xml>,
-                                 ToJson = fn _ => error <xml>Tried to ToJson in ToYaml!</xml>,
-                                 FromJson = fn _ => error <xml>Tried to FromJson in ToYaml!</xml>}).ToYaml i x
+    fun yTo b i (Rec x) = (json_t {ToYaml = yTo,
+                                   FromYaml = fn _ _ _ => error <xml>Tried to FromYaml in ToYaml!</xml>,
+                                   ToJson = fn _ => error <xml>Tried to ToJson in ToYaml!</xml>,
+                                   FromJson = fn _ => error <xml>Tried to FromJson in ToYaml!</xml>}).ToYaml b i x
 
     fun yFrom b i s =
         let
@@ -1396,7 +1413,7 @@ fun primIn (s : string) : result (prim * string) =
 
 val json_prim =
     {ToJson = primOut,
-     ToYaml = fn _ => primOut,
+     ToYaml = fn _ _ => primOut,
      FromJson = primIn,
      FromYaml = fn _ _ => primIn >>> resultErrorGet}
 
