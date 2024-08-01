@@ -787,12 +787,6 @@ fun json_record_withDefaults
       end,
     ToYaml = fn b i r =>
       let
-        val withRequired =
-          @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
-            (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
-            "" fl jss names (r --- _)
-
         val withOptional =
           @foldR3 [json] [fn t => string * t] [ident] [fn _ => string]
             (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) (name, def) v acc =>
@@ -805,9 +799,15 @@ fun json_record_withDefaults
                 then acc
                 else "\n" ^ indent i ^ name ^ ": " ^ yv ^ acc
               end)
-            withRequired ofl ojss onamesAndDefaults (r --- _)
+            "" ofl ojss onamesAndDefaults (r --- _)
+
+        val withRequired =
+          @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
+            (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
+              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
+            withOptional fl jss names (r --- _)
       in
-          removeNewlineIfAfterBullet b withOptional
+          removeNewlineIfAfterBullet b withRequired
       end,
     FromYaml = fn b i s =>
       let
@@ -955,12 +955,6 @@ fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
         end,
      ToYaml = fn b i r =>
                  let
-                     val withRequired =
-                         @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
-                          (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
-                              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
-                          "" fl jss names (r --- _)
-
                      val withOptional =
                          @foldR3 [json] [fn _ => string] [option] [fn _ => string]
                           (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
@@ -968,9 +962,15 @@ fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
                                   None => acc
                                 | Some v =>
                                   "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
-                          withRequired ofl ojss onames (r --- _)
+                          "" ofl ojss onames (r --- _)
+
+                     val withRequired =
+                         @foldR3 [json] [fn _ => string] [ident] [fn _ => string]
+                          (fn [nm ::_] [t ::_] [r ::_] [[nm] ~ r] (j : json t) name v acc =>
+                              "\n" ^ indent i ^ name ^ ": " ^ j.ToYaml False (i+2) v ^ acc)
+                          withOptional fl jss names (r --- _)
                  in
-                     removeNewlineIfAfterBullet b withOptional
+                     removeNewlineIfAfterBullet b withRequired
                  end,
      FromYaml = fn b i s =>
                    let
