@@ -13,6 +13,10 @@ val fromJsonR' : a ::: Type -> json a -> string -> result (a * string)
 val toYaml : a ::: Type -> json a -> a -> string
 val fromYaml : a ::: Type -> json a -> string -> a
 
+(* Versions of fromJson that return a `result` instead of erroring on failure. *)
+val fromYamlR : a ::: Type -> json a -> string -> result a
+val fromYamlR' : a ::: Type -> json a -> string -> result (a * string)
+
 val mkJson : a ::: Type -> {ToJson : a -> string,
                             FromJson : string -> result (a * string)} -> json a
 
@@ -114,6 +118,20 @@ functor RecursiveDataType
      val fl : a ::: Type -> folder (ts a)
      val js : a ::: Type -> json a -> $(map json (ts a))
      val names : a ::: Type -> $(map (fn _ => string) (ts a))
+     val to : a ::: Type -> (a -> t) -> $(map (fn t' => t' -> t) (ts a))
+     val from : a ::: Type -> (t -> a) -> t -> variant (ts a)
+     end) : sig
+    val json_t : json M.t
+end
+
+(* Like above, but make the constructors anonymous, i.e., derived based on their
+fields. *)
+functor RecursiveDataTypeAnon
+    (M : sig
+     con t :: Type
+     con ts :: Type -> {Type}
+     val fl : a ::: Type -> folder (ts a)
+     val js : a ::: Type -> json a -> $(map json (ts a))
      val to : a ::: Type -> (a -> t) -> $(map (fn t' => t' -> t) (ts a))
      val from : a ::: Type -> (t -> a) -> t -> variant (ts a)
      end) : sig
