@@ -1225,21 +1225,17 @@ fun json_variant_anon [ts ::: {Type}] (fl : folder ts) (jss : $(map json ts)) : 
       (@Top.mp [json] [fn t => t -> string]
         (fn [t] (j : json t) (v : t) => j.ToYaml b i v) fl jss),
      FromYaml = fn b i s =>
-      let
-        val (i', s') = readYamlLine (if b then Some i else None) s
-      in
         (@foldR [json]
           [fn ts => ts' :: {Type} -> [ts ~ ts'] => result (variant (ts ++ ts') * string)]
           (fn [nm ::_] [t ::_] [rest ::_] [[nm] ~ rest] (j : json t)
             (acc : ts' :: {Type} -> [rest ~ ts'] => result (variant (rest ++ ts') * string)) [fwd ::_] [[nm = t] ++ rest ~ fwd] =>
               case acc [fwd] of
                 Success x => acc [fwd ++ [nm = t]]
-              | Failure x => (case j.FromYaml False i' (skipRealSpaces s') of
+              | Failure x => (case j.FromYaml b i (skipRealSpaces s) of
                   Success (v, s') => Success (make [nm] v, s')
                 | Failure _ => Failure x))
           (fn [fwd ::_] [[] ~ fwd] => Failure <xml>Unknown anonymous YAML variant</xml>)
-          fl jss) [[]] !
-      end}
+          fl jss) [[]] !}
 
 val json_unit : json unit = json_record {} {}
 
