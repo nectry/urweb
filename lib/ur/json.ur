@@ -1277,7 +1277,8 @@ fun json_dict [a] (j : json a) : json (list (string * a)) = {
       end,
      ToYaml = fn b i ls =>
                  removeNewlineIfAfterBullet b
-                   (foldl (fn (k, v) acc => "\n" ^ indent i ^ k ^ ": " ^ j.ToYaml False (i+1) v ^ acc) "" ls),
+                   (* We reverse the list to make it print in the correct order. *)
+                   (foldl (fn (k, v) acc => "\n" ^ indent i ^ k ^ ": " ^ j.ToYaml False (i+1) v ^ acc) "" (rev ls)),
      FromYaml = fn b i s =>
       let
         fun fromY b s acc =
