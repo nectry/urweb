@@ -23,8 +23,14 @@ val mseek : {Haystack : t, Needle : t} -> option (char * string)
 
 val split : t -> char -> option (string * string)
 val split' : t -> char -> option (string * string) (* The matched character is kept at the beginning of the suffix. *)
+
+(* Needle is a set of characters to look for. msplit returns the first instance
+of the first character of the needle that it finds in the haystack, or None if
+none are found. The char in the returned tuple is the needle that was found. *)
 val msplit : {Haystack : t, Needle : t} -> option (string * char * string)
 
+(* Needle is a possible substring of haystack. If found in the haystack,
+return the substrings before and after the needle, otherwise return None. *)
 val ssplit : {Haystack : t, Needle : t} -> option (string * string)
 
 val all : (char -> bool) -> string -> bool
