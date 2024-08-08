@@ -469,7 +469,7 @@ val json_bool = {
             Success (False, String.suffix s 7)
         else
             Failure <xml>JSON: bad boolean string: {[s]}</xml>,
-    ToYaml = fn _ _ b => if b then "True" else "False",
+    ToYaml = fn _ _ b => if b then "true" else "false",
     FromYaml = fn _ _ s =>
       let val s' =
         case String.msplit {Haystack = s, Needle = " \r\n"} of
