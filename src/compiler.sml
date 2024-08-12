@@ -237,6 +237,7 @@ val parseUrs =
 	           val (absyn, _) = UrwebP.parse (30, lexer, parseerror, ())
                in
                    TextIO.closeIn file;
+                   OS.FileSys.remove fname;
                    case absyn of
                        [(Source.DSgn ("?", (Source.SgnConst sgis, _)), _)] => sgis
                      | _ => (ErrorMsg.errorAt {file = filename,
