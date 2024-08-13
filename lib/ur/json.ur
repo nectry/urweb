@@ -1400,11 +1400,35 @@ fun primIn (s : string) : result (prim * string) =
         Failure <xml>Didn't find primitive where expected in JSON</xml>
     end
 
+fun primInYaml (i : int) (s : string) : result (prim * string) =
+  if s = "" then
+    Failure <xml>Reading primitive from empty YAML string</xml>
+  else
+    let val ch = String.sub s 0 in
+      if ch = #"\"" || ch = #"'" || ch = #">" || ch = #"|" then
+        (r, s') <- yamlStringIn i s;
+        return (String r, s')
+      else if String.isPrefix {Full = s, Prefix = "true"} then
+        return (Bool True, String.suffix s 4)
+      else if String.isPrefix {Full = s, Prefix = "false"} then
+        return (Bool False, String.suffix s 5)
+      else if Char.isDigit ch || ch = #"-" || ch = #"." then
+        (r, s') <- numIn s;
+        case read r of
+            Some n => return (Int n, s')
+          | None =>
+            case read r of
+                Some n => return (Float n, s')
+              | None => Failure <xml>Invalid number in YAML</xml>
+      else
+        Failure <xml>Didn't find primitive where expected in YAML</xml>
+    end
+
 val json_prim =
     {ToJson = primOut,
      ToYaml = fn _ _ => primOut,
      FromJson = primIn,
-     FromYaml = fn _ _ => primIn}
+     FromYaml = fn _ => primInYaml}
 
 val show_prim = mkShow (fn x =>
                            case x of
