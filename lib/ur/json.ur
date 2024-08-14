@@ -709,11 +709,9 @@ fun skipUntilIndentLowEnough (target : int) (s : string) : string =
 
 fun json_record_withDefaults
     [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
-    (fl : folder ts)
-    (jss : $(map json ts))
+    (fl : folder ts) (ofl : folder ots)
+    (jss : $(map json ts)) (ojss : $(map json ots))
     (names : $(map (fn _ => string) ts))
-    (ofl : folder ots)
-    (ojss : $(map json ots))
     (onamesAndDefaults : $(map (fn t => string * t) ots))
       : json $(ts ++ ots) = {
   ToJson = fn r =>
@@ -872,8 +870,10 @@ fun json_record_withDefaults
       end}
 
 fun json_record_withOptional [ts ::: {Type}] [ots ::: {Type}] [ts ~ ots]
-                             (fl : folder ts) (jss : $(map json ts)) (names : $(map (fn _ => string) ts))
-                             (ofl : folder ots) (ojss : $(map json ots)) (onames : $(map (fn _ => string) ots)): json $(ts ++ map option ots) =
+                             (fl : folder ts) (ofl : folder ots)
+                             (jss : $(map json ts)) (ojss : $(map json ots))
+                             (names : $(map (fn _ => string) ts))
+                             (onames : $(map (fn _ => string) ots)): json $(ts ++ map option ots) =
     {ToJson = fn r =>
                  let
                      val withRequired =

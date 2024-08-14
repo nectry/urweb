@@ -48,13 +48,16 @@ contains its default value, it will be omitted, and during parsing, any field
 that is missing will be filled in with its default value. *)
 val json_record_withDefaults
   : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
-  => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
-  -> folder ots -> $(map json ots) -> $(map (fn t => string * t) ots)
-  -> json $(ts ++ ots)
+    => folder ts -> folder ots
+    -> $(map json ts) -> $(map json ots)
+    -> $(map (fn _ => string) ts)
+    -> $(map (fn t => string * t) ots)
+    -> json $(ts ++ ots)
 
 val json_record_withOptional : ts ::: {Type} -> ots ::: {Type} -> [ts ~ ots]
-                               => folder ts -> $(map json ts) -> $(map (fn _ => string) ts)
-                               -> folder ots -> $(map json ots) -> $(map (fn _ => string) ots)
+                               => folder ts -> folder ots
+                               -> $(map json ts) -> $(map json ots)
+                               -> $(map (fn _ => string) ts) -> $(map (fn _ => string) ots)
                                -> json $(ts ++ map option ots)
 val json_variant : ts ::: {Type} -> folder ts -> $(map json ts) -> $(map (fn _ => string) ts) -> json (variant ts)
 
